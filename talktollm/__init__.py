@@ -67,7 +67,7 @@ def set_clipboard(text: str, retries: int = 3, delay: float = 0.2):
             raise  # Re-raise other exceptions
     print(f"Failed to set clipboard after {retries} attempts.")
 
-def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: bool = False) -> str:
+def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: bool = False, tabswitch: bool = True) -> str:
     """
     Interacts with a specified Large Language Model (LLM).
 
@@ -76,6 +76,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         prompt: The text prompt to send to the LLM.
         imagedata: Optional list of base64 encoded image strings to send to the LLM.
         debug: Whether to enable debugging output.
+        tabswitch: Whether to switch tabs after interacting with the LLM.
 
     Returns:
         The LLM's response as a string.
@@ -112,7 +113,8 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
     
     pyautogui.hotkey('ctrl', 'w')
     
-    pyautogui.hotkey('alt', 'tab')
+    if tabswitch:
+        pyautogui.hotkey('alt', 'tab')
 
     # Get LLM's response
     win32clipboard.OpenClipboard()
