@@ -13,11 +13,11 @@ import shutil
 import webbrowser
 import os
 
-def set_image_path(llm, debug=False):
+def set_image_path(llm: str, debug: bool = False):
     """Dynamically sets the image path for optimisewait based on package installation location."""
     copy_images_to_temp(llm, debug=debug)
 
-def copy_images_to_temp(llm, debug=False):
+def copy_images_to_temp(llm: str, debug: bool = False):
     """Copies the necessary image files to a temporary directory."""
     temp_dir = tempfile.gettempdir()
     image_path = os.path.join(temp_dir, 'talktollm_images', llm)
@@ -45,7 +45,7 @@ def copy_images_to_temp(llm, debug=False):
     if debug:
         print(f"Autopath set to: {image_path}")
 
-def set_clipboard(text, retries=3, delay=0.2):
+def set_clipboard(text: str, retries: int = 3, delay: float = 0.2):
     for i in range(retries):
         try:
             win32clipboard.OpenClipboard()
@@ -67,7 +67,19 @@ def set_clipboard(text, retries=3, delay=0.2):
             raise  # Re-raise other exceptions
     print(f"Failed to set clipboard after {retries} attempts.")
 
-def talkto(llm, prompt, imagedata=None, debug=False):
+def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: bool = False) -> str:
+    """
+    Interacts with a specified Large Language Model (LLM).
+
+    Args:
+        llm: The name of the LLM to interact with ('deepseek' or 'gemini').
+        prompt: The text prompt to send to the LLM.
+        imagedata: Optional list of base64 encoded image strings to send to the LLM.
+        debug: Whether to enable debugging output.
+
+    Returns:
+        The LLM's response as a string.
+    """
     llm = llm.lower()
     set_image_path(llm, debug=debug)
     urls = {
@@ -109,7 +121,7 @@ def talkto(llm, prompt, imagedata=None, debug=False):
 
     return response
 
-def set_clipboard_image(image_data, retries=3, delay=0.2):
+def set_clipboard_image(image_data: str, retries: int = 3, delay: float = 0.2):
     """Set image data to clipboard with retries"""
     for attempt in range(retries):
         try:

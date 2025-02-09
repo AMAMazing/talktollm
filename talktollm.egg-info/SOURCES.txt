@@ -1,4 +1,5 @@
 LICENSE
+README.md
 setup.py
 talktollm/__init__.py
 talktollm/__main__.py
