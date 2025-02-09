@@ -13,33 +13,37 @@ import shutil
 import webbrowser
 import os
 
-def set_image_path(llm):
+def set_image_path(llm, debug=False):
     """Dynamically sets the image path for optimisewait based on package installation location."""
-    copy_images_to_temp(llm)
+    copy_images_to_temp(llm, debug=debug)
 
-def copy_images_to_temp(llm):
+def copy_images_to_temp(llm, debug=False):
     """Copies the necessary image files to a temporary directory."""
     temp_dir = tempfile.gettempdir()
     image_path = os.path.join(temp_dir, 'talktollm_images', llm)
     os.makedirs(image_path, exist_ok=True)
-    print(f"Temporary image directory: {image_path}")
+    if debug:
+        print(f"Temporary image directory: {image_path}")
 
     # Get the path to the original images directory within the package
-    with importlib.resources.path('talktollm', 'images') as original_images_dir:
-        original_image_path = original_images_dir / llm
+    original_images_dir = importlib.resources.files('talktollm').joinpath('images')
+    original_image_path = original_images_dir / llm
+    if debug:
         print(f"Original image directory: {original_image_path}")
-        # Copy each file from the original directory to the temporary directory
-        for filename in os.listdir(original_image_path):
-            source_file = os.path.join(original_image_path, filename)
-            destination_file = os.path.join(image_path, filename)
-            if not os.path.exists(destination_file):
+    # Copy each file from the original directory to the temporary directory
+    for filename in os.listdir(original_image_path):
+        source_file = os.path.join(original_image_path, filename)
+        destination_file = os.path.join(image_path, filename)
+        if not os.path.exists(destination_file):
+            if debug:
                 print(f"Copying {source_file} to {destination_file}")
-                shutil.copy2(source_file, destination_file)
-            else:
-                print(f"File already exists: {destination_file}")
+            shutil.copy2(source_file, destination_file)
+        elif debug:
+            print(f"File already exists: {destination_file}")
 
     set_autopath(image_path)
-    print(f"Autopath set to: {image_path}")
+    if debug:
+        print(f"Autopath set to: {image_path}")
 
 def set_clipboard(text, retries=3, delay=0.2):
     for i in range(retries):
@@ -63,17 +67,16 @@ def set_clipboard(text, retries=3, delay=0.2):
             raise  # Re-raise other exceptions
     print(f"Failed to set clipboard after {retries} attempts.")
 
-def talkto(llm, prompt, imagedata=None):
+def talkto(llm, prompt, imagedata=None, debug=False):
     llm = llm.lower()
-    set_image_path(llm)
+    set_image_path(llm, debug=debug)
     urls = {
         'deepseek': 'https://chat.deepseek.com/',
         'gemini': 'https://aistudio.google.com/prompts/new_chat'
     }
-    
 
     webbrowser.open_new_tab(urls[llm])
-    
+
     optimiseWait('message',clicks=2)
 
     # If there are images, paste each one
@@ -135,4 +138,4 @@ def set_clipboard_image(image_data, retries=3, delay=0.2):
     return False
 
 if __name__ == "__main__":
-    print(talkto('gemini','How to easily get element names and such for selenium or other headless webbrowser automation',chatgpt='gpt-4o'))
+    print(talkto('gemini','Hi'))
