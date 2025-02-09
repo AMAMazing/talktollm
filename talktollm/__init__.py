@@ -1,5 +1,4 @@
 from time import sleep
-import webbrowser
 import win32clipboard
 from optimisewait import optimiseWait, set_autopath
 import pyautogui
@@ -8,6 +7,39 @@ import pywintypes
 import base64
 import io
 from PIL import Image
+import importlib.resources
+import tempfile
+import shutil
+import webbrowser
+import os
+
+def set_image_path(llm):
+    """Dynamically sets the image path for optimisewait based on package installation location."""
+    copy_images_to_temp(llm)
+
+def copy_images_to_temp(llm):
+    """Copies the necessary image files to a temporary directory."""
+    temp_dir = tempfile.gettempdir()
+    image_path = os.path.join(temp_dir, 'talktollm_images', llm)
+    os.makedirs(image_path, exist_ok=True)
+    print(f"Temporary image directory: {image_path}")
+
+    # Get the path to the original images directory within the package
+    with importlib.resources.path('talktollm', 'images') as original_images_dir:
+        original_image_path = original_images_dir / llm
+        print(f"Original image directory: {original_image_path}")
+        # Copy each file from the original directory to the temporary directory
+        for filename in os.listdir(original_image_path):
+            source_file = os.path.join(original_image_path, filename)
+            destination_file = os.path.join(image_path, filename)
+            if not os.path.exists(destination_file):
+                print(f"Copying {source_file} to {destination_file}")
+                shutil.copy2(source_file, destination_file)
+            else:
+                print(f"File already exists: {destination_file}")
+
+    set_autopath(image_path)
+    print(f"Autopath set to: {image_path}")
 
 def set_clipboard(text, retries=3, delay=0.2):
     for i in range(retries):
@@ -31,20 +63,17 @@ def set_clipboard(text, retries=3, delay=0.2):
             raise  # Re-raise other exceptions
     print(f"Failed to set clipboard after {retries} attempts.")
 
-def talkto(llm, prompt, imagedata=None, chatgpt='o1'):
+def talkto(llm, prompt, imagedata=None):
     llm = llm.lower()
-
-    set_autopath(rf'D:\cline-x-claudeweb\images\{llm}')
+    set_image_path(llm)
     urls = {
         'deepseek': 'https://chat.deepseek.com/',
-        'gemini': 'https://aistudio.google.com/prompts/new_chat',
-        'chatgpt': f'https://chatgpt.com/?model={chatgpt}'
+        'gemini': 'https://aistudio.google.com/prompts/new_chat'
     }
+    
 
     webbrowser.open_new_tab(urls[llm])
-
-    optimiseWait('loaded',clicks=0)
-
+    
     optimiseWait('message',clicks=2)
 
     # If there are images, paste each one
@@ -62,16 +91,9 @@ def talkto(llm, prompt, imagedata=None, chatgpt='o1'):
     optimiseWait('run')
     
     if llm == 'gemini':
-        optimiseWait('done')
+        optimiseWait('done',clicks=0)
 
-    if llm != 'chatgpt':
-        optimiseWait('copy')
-    else:
-        optimiseWait('ready')
-        pydirectinput.click(x=500, y=500)
-        while (optimiseWait('copy',dontwait=True)['found']) == False:
-            pyautogui.scroll(-100)
-        optimiseWait('copy')
+    optimiseWait('copy')
     
     pyautogui.hotkey('ctrl', 'w')
     
@@ -112,6 +134,5 @@ def set_clipboard_image(image_data, retries=3, delay=0.2):
             return False
     return False
 
-
 if __name__ == "__main__":
-    print(talkto('chatgpt','How to easily get element names and such for selenium or other headless webbrowser automation',chatgpt='gpt-4o'))
+    print(talkto('gemini','How to easily get element names and such for selenium or other headless webbrowser automation',chatgpt='gpt-4o'))

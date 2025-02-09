@@ -1,0 +1,17 @@
+LICENSE
+setup.py
+talktollm/__init__.py
+talktollm/__main__.py
+talktollm.egg-info/PKG-INFO
+talktollm.egg-info/SOURCES.txt
+talktollm.egg-info/dependency_links.txt
+talktollm.egg-info/entry_points.txt
+talktollm.egg-info/requires.txt
+talktollm.egg-info/top_level.txt
+talktollm/images/deepseek/copy.png
+talktollm/images/deepseek/message.png
+talktollm/images/deepseek/run.png
+talktollm/images/gemini/copy.png
+talktollm/images/gemini/done.png
+talktollm/images/gemini/message.png
+talktollm/images/gemini/run.png
