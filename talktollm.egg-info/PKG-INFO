@@ -1,6 +1,6 @@
 Metadata-Version: 2.2
 Name: talktollm
-Version: 0.2.3
+Version: 0.2.6
 Summary: A Python utility for interacting with large language models (LLMs) through a command-line interface
 Home-page: https://github.com/AMAMazing/talktollm
 Author: Alex M

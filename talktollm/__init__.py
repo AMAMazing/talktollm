@@ -12,15 +12,6 @@ import tempfile
 import shutil
 import webbrowser
 import os
-import pygetwindow as gw
-
-def switch_to_chrome():
-    """Switches focus to the Chrome window if available."""
-    chrome_windows = [w for w in gw.getWindowsWithTitle("Google Chrome")]
-    if chrome_windows:
-        chrome_windows[0].activate()
-    else:
-        print("Chrome window not found.")
 
 def set_image_path(llm: str, debug: bool = False):
     """Dynamically sets the image path for optimisewait based on package installation location."""
@@ -99,8 +90,6 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
 
     webbrowser.open_new_tab(urls[llm])
 
-    switch_to_chrome()  
-
     optimiseWait('message',clicks=2)
 
     # If there are images, paste each one
@@ -119,7 +108,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
     
     if llm == 'gemini':
         optimiseWait('done',clicks=0)
-        sleep(1)
+        sleep(1.5)
 
     optimiseWait('copy')
     
