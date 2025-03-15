@@ -106,10 +106,6 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
 
     optimiseWait('run')
     
-    if llm == 'gemini':
-        optimiseWait('done',clicks=0)
-        sleep(1.5)
-
     optimiseWait('copy')
     
     pyautogui.hotkey('ctrl', 'w')
