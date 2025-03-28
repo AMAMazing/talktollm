@@ -5,81 +5,160 @@ A Python utility for interacting with large language models (LLMs) through a com
 ## Features
 
 -   **Command-Line Interaction:** Provides a simple and intuitive command-line interface for interacting with LLMs.
--   **Automated Image Recognition:** Employs image recognition techniques to identify and interact with elements on the LLM interface, such as input fields and submit buttons.
--   **Multi-LLM Support:** Currently supports DeepSeek and Gemini, with the potential for expansion to other LLMs.
--   **Automated Conversations:** Facilitates automated conversations and task execution by simulating user interactions with the LLM interface.
--   **Image Support:** Allows sending images to the LLM, handling the image processing and clipboard operations.
-- **Easy to use:** The package is very easy to set up and use.
+-   **Automated Image Recognition:** Employs image recognition techniques (via `optimisewait`) to identify and interact with elements on the LLM interface. Includes fallback if `optimisewait` is not installed.
+-   **Multi-LLM Support:** Currently supports DeepSeek and Gemini.
+-   **Automated Conversations:** Facilitates automated conversations and task execution by simulating user interactions.
+-   **Image Support:** Allows sending images (base64 encoded) to the LLM.
+-   **Robust Clipboard Handling:** Includes configurable retry mechanisms (default 5 retries) for setting text/images to the clipboard and reading text from the clipboard to handle access errors and timing issues.
+-   **Dynamic Image Path Management:** Copies necessary recognition images to a temporary directory, ensuring they are accessible and up-to-date.
+-   **Easy to use:** Designed for simple setup and usage.
 
 ## Core Functionality
 
-The core function of `talktollm` is the `talkto(llm, prompt, imagedata=None, debug=False)` function. This function takes the following arguments:
+The core function is `talkto(llm, prompt, imagedata=None, debug=False, tabswitch=True, read_retries=5, read_delay=0.3)`.
 
--   `llm`: The name of the LLM to interact with (e.g., 'deepseek' or 'gemini').
--   `prompt`: The text prompt to send to the LLM.
--   `imagedata`: Optional image data to send to the LLM. This should be a list of base64 encoded strings representing the images.
--   `debug`: A boolean flag to enable debugging output.
+**Arguments:**
 
-The `talkto` function performs the following steps:
+-   `llm` (str): The LLM name ('deepseek' or 'gemini').
+-   `prompt` (str): The text prompt.
+-   `imagedata` (list[str] | None): Optional list of base64 encoded image strings (e.g., "data:image/png;base64,...").
+-   `debug` (bool): Enable detailed console output. Defaults to `False`.
+-   `tabswitch` (bool): Switch focus back to the previous window after closing the LLM tab. Defaults to `True`.
+-   `read_retries` (int): Number of attempts to read the final response from the clipboard. Defaults to 5.
+-   `read_delay` (float): Delay in seconds between clipboard read attempts. Defaults to 0.3.
 
-1.  Opens the LLM's website in a new browser tab.
-2.  Finds the message input box using image recognition (optimisewait).
-3.  If image data is provided, it iterates through the images, converts them to the correct format, and pastes them into the LLM input.
-4.  Pastes the provided text prompt into the LLM input.
-5.  Finds and clicks the 'run' button using image recognition.
-6.  Waits for the LLM to finish processing (for Gemini, it waits for a 'done' indicator).
-7.  Finds and clicks the 'copy' button using image recognition.
-8.  Closes the browser tab.
-9.  Retrieves the LLM's response from the clipboard.
+**Steps:**
 
-## Image Handling
+1.  Validates the LLM name.
+2.  Sets up image paths for `optimisewait` using `set_image_path`.
+3.  Opens the LLM's website in a new browser tab.
+4.  Waits and clicks the message input area using `optimiseWait('message', clicks=2)`.
+5.  If `imagedata` is provided:
+    -   Iterates through images.
+    -   Sets each image to the clipboard using `set_clipboard_image` (with retries).
+    -   Pastes the image (`Ctrl+V`).
+    -   Waits for potential upload (`sleep(7)`).
+6.  Sets the `prompt` text to the clipboard using `set_clipboard` (with retries).
+7.  Pastes the prompt (`Ctrl+V`).
+8.  Waits and clicks the 'run' button using `optimiseWait('run')`.
+9.  Waits for the response generation, using `optimiseWait('copy')` as an indicator that the response is ready and the copy button is visible.
+10. Waits briefly (`sleep(0.5)`) after `optimiseWait('copy')` clicks the copy button.
+11. Closes the browser tab (`Ctrl+W`).
+12. Switches focus back if `tabswitch` is `True` (`Alt+Tab`).
+13. Attempts to read the LLM's response from the clipboard with retry logic (`read_retries`, `read_delay`).
+14. Returns the retrieved text response, or an empty string if reading fails.
 
-`talktollm` includes functionality for handling images to be sent to the LLMs.
+## Helper Functions
 
-- `set_clipboard_image(image_data, retries=3, delay=0.2)` is used to set the image to the clipboard. This function takes base64 encoded image data, decodes it, converts it to a bitmap, and places it on the clipboard.
-- `set_image_path(llm, debug=False)` is used to determine where the image is on the users computer by using the `copy_images_to_temp` function.
-- `copy_images_to_temp(llm, debug=False)`: Copies images used for image recognition to the temporary directory.
+**Clipboard Handling:**
+
+-   `set_clipboard(text: str, retries: int = 5, delay: float = 0.2)`: Sets text to the clipboard, handling `CF_UNICODETEXT`. Retries on common access errors (`winerror 5` or `1418`).
+-   `set_clipboard_image(image_data: str, retries: int = 5, delay: float = 0.2)`: Sets a base64 encoded image to the clipboard (`CF_DIB` format). Decodes, converts to BMP, and retries on common access errors.
+
+**Image Path Management:**
+
+-   `set_image_path(llm: str, debug: bool = False)`: Orchestrates copying images.
+-   `copy_images_to_temp(llm: str, debug: bool = False)`: Copies necessary `.png` images for the specified `llm` from the package's `images/<llm>` directory to a temporary location (`%TEMP%\\talktollm_images\\<llm>`). Creates the temporary directory if needed and only copies if the source file is newer or the destination doesn't exist. Sets the `optimisewait` autopath. Includes error handling for missing package resources.
 
 ## Installation
-
-This section provides instructions on how to install the `talktollm` package.
 
 ```
 pip install talktollm
 ```
 
+*Note: Requires `optimisewait` for image recognition. Install separately if needed (`pip install optimisewait`).*
+
 ## Usage
 
-This will start by trying to find the LLM in the top left of the primary monitor. Basic usage instructions and examples are presented here.
+Here are some examples of how to use `talktollm`.
 
+**Example 1: Simple Text Prompt**
 
-```
-python
+Send a basic text prompt to Gemini.
+
+```python
 import talktollm
-response = talktollm.talkto('gemini', 'Write a poem about cats.')
+
+prompt_text = "Explain quantum entanglement in simple terms."
+response = talktollm.talkto('gemini', prompt_text)
+print("--- Simple Gemini Response ---")
 print(response)
-
-# Example with image
-# response = talktollm.talkto('gemini', 'Describe this image', imagedata=['data:image/png;base64,iVBOR...'])
-
 ```
+
+**Example 2: Text Prompt with Debugging**
+
+Send a text prompt and enable debugging output to see more details about the process.
+
+```python
+import talktollm
+
+prompt_text = "What are the main features of Python 3.12?"
+response = talktollm.talkto('deepseek', prompt_text, debug=True)
+print("--- DeepSeek Debug Response ---")
+print(response)
+```
+
+**Example 3: Preparing Image Data**
+
+Load an image file, encode it in base64, and format it correctly for the `imagedata` argument.
+
+```python
+import base64
+import io
+from PIL import Image
+
+# Load your image (replace 'path/to/your/image.png' with the actual path)
+try:
+    with open("path/to/your/image.png", "rb") as image_file:
+        # Encode to base64
+        encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+        # Format as a data URI
+        image_data_uri = f"data:image/png;base64,{encoded_string}"
+        print("Image prepared successfully!")
+        # You can now pass [image_data_uri] to the imagedata parameter
+except FileNotFoundError:
+    print("Error: Image file not found. Please check the path.")
+    image_data_uri = None
+except Exception as e:
+    print(f"Error processing image: {e}")
+    image_data_uri = None
+
+# This 'image_data_uri' variable holds the string needed for the next example
+```
+
+**Example 4: Text and Image Prompt**
+
+Send a text prompt along with a prepared image to Gemini. (Assumes `image_data_uri` was successfully created in Example 3).
+
+```python
+import talktollm
+
+# Assuming image_data_uri is available from the previous example
+if image_data_uri:
+    prompt_text = "Describe the main subject of this image."
+    response = talktollm.talkto(
+        'gemini',
+        prompt_text,
+        imagedata=[image_data_uri], # Pass the image data as a list
+        debug=True
+    )
+    print("--- Gemini Image Response ---")
+    print(response)
+else:
+    print("Skipping image example because image data is not available.")
+```
+
 ## Dependencies
 
-Lists the external libraries that `talktollm` depends on.
-
--   pywin32
--   pyautogui
--   pillow
--   optimisewait
+-   `pywin32`: For Windows API access (clipboard).
+-   `pyautogui`: For GUI automation (keystrokes, potentially mouse if `optimisewait` fails).
+-   `Pillow`: For image processing (opening, converting for clipboard).
+-   `optimisewait` (Optional but Recommended): For robust image-based waiting and clicking.
 
 ## Contributing
 
-Describes how others can contribute to the development of `talktollm`.
-
-Pull requests are welcome! For significant changes, it's recommended to open an issue first to discuss the proposed modifications. This helps ensure that contributions align with the project's goals and maintain overall consistency.
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
 ## License
-
-Specifies the license under which `talktollm` is distributed.
 
 MIT
