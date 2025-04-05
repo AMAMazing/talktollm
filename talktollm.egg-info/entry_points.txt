@@ -1,2 +1,2 @@
 [console_scripts]
-talktollm = talktollm:talkto
+talktollm = talktollm.__init__:talkto

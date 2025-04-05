@@ -1,12 +1,23 @@
 from setuptools import setup, find_packages
+import os
+
+def read(fname):
+    return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(
     name='talktollm',
-    version='0.3.0',
+    version='0.3.1',
+    author="Alex M",
+    author_email="alexmalone489@gmail.com", 
+    description="A Python utility for interacting with large language models (LLMs) via web automation",
+    long_description=read("README.md"),
+    long_description_content_type="text/markdown",
+    url="https://github.com/AMAMazing/talktollm",
+    keywords=["llm", "automation", "gui", "pyautogui", "gemini", "deepseek", "clipboard"],
     packages=find_packages(),
     include_package_data=True,
     package_data={
-        'talktollm': ['images//*'],
+        'talktollm': ['images/deepseek/*', 'images/gemini/*'],
     },
     install_requires=[
         'pywin32',
@@ -16,18 +27,17 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'talktollm=talktollm:talkto',
+            'talktollm=talktollm.__init__:talkto',
         ],
     },
-    author="Alex M",
-    description="A Python utility for interacting with large language models (LLMs) through a command-line interface",
-    long_description=open("README.md").read(),
-    long_description_content_type="text/markdown",
-    url="https://github.com/AMAMazing/talktollm",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent",
+        "Operating System :: Microsoft :: Windows", 
+        "Development Status :: 4 - Beta", 
+        "Intended Audience :: Developers",
+        "Topic :: Communications :: Chat",
+        "Topic :: Scientific/Engineering :: Image Recognition",
     ],
     python_requires=">=3.6",
 )
