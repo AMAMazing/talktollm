@@ -1,5 +1,8 @@
 # talktollm
 
+[![PyPI version](https://badge.fury.io/py/talktollm.svg)](https://badge.fury.io/py/talktollm)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A Python utility for interacting with large language models (LLMs) through a command-line interface. It leverages image recognition to automate interactions with LLM web interfaces, enabling seamless conversations and task execution.
 
 ## Features
