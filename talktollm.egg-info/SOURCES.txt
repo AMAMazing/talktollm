@@ -13,6 +13,10 @@ talktollm/images/deepseek/copy.png
 talktollm/images/deepseek/message.png
 talktollm/images/deepseek/run.png
 talktollm/images/gemini/copy.png
+talktollm/images/gemini/copy2.png
 talktollm/images/gemini/done.png
 talktollm/images/gemini/message.png
+talktollm/images/gemini/orcopy.png
+talktollm/images/gemini/ormessage.png
 talktollm/images/gemini/run.png
+talktollm/images/gemini/type3.png

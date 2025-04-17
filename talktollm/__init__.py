@@ -21,9 +21,6 @@ except ImportError:
     print("Warning: 'optimisewait' library not found. Please install it.")
     # Define dummy functions if optimisewait is not installed to avoid NameErrors
     # You might want to raise an error or handle this differently
-    def optimiseWait(name, clicks=1):
-        print(f"optimiseWait called for '{name}' (dummy function). Waiting 3 seconds.")
-        time.sleep(3)
     def set_autopath(path):
         print(f"set_autopath called with '{path}' (dummy function).")
 
@@ -212,7 +209,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         # Add a small delay to allow the browser tab to open and potentially load initial elements
         sleep(2) # Adjust as needed
 
-        optimiseWait('message', clicks=2) # Assumes 'message' image corresponds to the input field
+        optimiseWait(['message','ormessage','type3'], clicks=2) # Assumes 'message' image corresponds to the input field
 
         # If there are images, paste each one
         if imagedata:
@@ -240,7 +237,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
 
         # Wait for the response to generate - this might need adjustment or a different optimisewait target
         if debug: print("Waiting for LLM response generation (using 'copy' as proxy)...")
-        optimiseWait('copy') # Assumes 'copy' image appears *after* response is generated and ready
+        optimiseWait(['copy', 'orcopy','copy2']) # Assumes 'copy' image appears *after* response is generated and ready
 
         # Click the copy button (optimiseWait already did this)
 
