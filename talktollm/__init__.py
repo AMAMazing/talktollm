@@ -333,31 +333,20 @@ if __name__ == "__main__":
     print("Running talkto example...")
     # Ensure optimisewait images for 'gemini' are available
     # in talktollm/images/gemini/message.png, run.png, copy.png
-    try:
-        # Simple text prompt
-        response_text = talkto('gemini', 'Explain the difference between a list and a tuple in Python.', debug=True)
-        print("\n--- LLM Response (Text) ---")
-        print(response_text)
-        print("---------------------------\n")
+    response_text = talkto('deepseek', 'Explain the difference between a list and a tuple in Python.', debug=True)
+    print("\n--- LLM Response (Text) ---")
+    print(response_text)
+    print("---------------------------\n")
 
-        # Example with a (dummy) image - replace with actual base64 image data
-        # Create a tiny dummy png image, base64 encode it
-        # For a real use case, load your image file and base64 encode it
-        try:
-            dummy_img = Image.new('RGB', (60, 30), color = 'red')
-            buffered = io.BytesIO()
-            dummy_img.save(buffered, format="PNG")
-            img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
-            img_data_uri = f"data:image/png;base64,{img_str}"
+        
+    dummy_img = Image.new('RGB', (60, 30), color = 'red')
+    buffered = io.BytesIO()
+    dummy_img.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
+    img_data_uri = f"data:image/png;base64,{img_str}"
 
-            print("Running talkto example with image...")
-            response_img = talkto('gemini', 'Describe this image.', imagedata=[img_data_uri], debug=True)
-            print("\n--- LLM Response (Image) ---")
-            print(response_img)
-            print("----------------------------\n")
-        except Exception as img_err:
-            print(f"Could not run image example: {img_err}")
-
-
-    except Exception as main_err:
-        print(f"An error occurred in the main execution block: {main_err}")
+    print("Running talkto example with image...")
+    response_img = talkto('deepseek', 'Describe this image.', imagedata=[img_data_uri], debug=True)
+    print("\n--- LLM Response (Image) ---")
+    print(response_img)
+    print("----------------------------\n")
