@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: talktollm
-Version: 0.3.6
+Version: 0.4.0
 Summary: A Python utility for interacting with large language models (LLMs) via web automation
 Home-page: https://github.com/AMAMazing/talktollm
 Author: Alex M
@@ -56,7 +56,7 @@ The core function is `talkto(llm, prompt, imagedata=None, debug=False, tabswitch
 
 **Arguments:**
 
--   `llm` (str): The LLM name ('deepseek' or 'gemini').
+-   `llm` (str): The LLM name ('deepseek','gemini' or 'aistudio').
 -   `prompt` (str): The text prompt.
 -   `imagedata` (list[str] | None): Optional list of base64 encoded image strings (e.g., "data:image/png;base64,...").
 -   `debug` (bool): Enable detailed console output. Defaults to `False`.

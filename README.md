@@ -22,7 +22,7 @@ The core function is `talkto(llm, prompt, imagedata=None, debug=False, tabswitch
 
 **Arguments:**
 
--   `llm` (str): The LLM name ('deepseek' or 'gemini').
+-   `llm` (str): The LLM name ('deepseek','gemini' or 'aistudio').
 -   `prompt` (str): The text prompt.
 -   `imagedata` (list[str] | None): Optional list of base64 encoded image strings (e.g., "data:image/png;base64,...").
 -   `debug` (bool): Enable detailed console output. Defaults to `False`.

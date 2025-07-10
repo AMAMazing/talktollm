@@ -201,7 +201,8 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
 
     urls = {
         'deepseek': 'https://chat.deepseek.com/',
-        'gemini': 'https://aistudio.google.com/prompts/new_chat' # Or specific Gemini chat URL if available
+        'gemini': 'https://gemini.google.com/app',
+        'aistudio': 'https://aistudio.google.com/prompts/new_chat' # Or specific Gemini chat URL if available
     }
 
     try:
