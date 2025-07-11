@@ -194,7 +194,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         The LLM's response as a string, or an empty string if retrieval fails.
     """
     llm = llm.lower()
-    if llm not in ['deepseek', 'gemini']:
+    if llm not in ['deepseek', 'gemini','aistudio']:
         raise ValueError(f"Unsupported LLM: {llm}. Choose 'deepseek' or 'gemini'.")
 
     set_image_path(llm, debug=debug) # Ensure images for optimiseWait are ready
