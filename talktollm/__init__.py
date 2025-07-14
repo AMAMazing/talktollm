@@ -243,7 +243,11 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         # Click the copy button (optimiseWait already did this)
 
         # Add a small explicit delay AFTER clicking copy, before closing tab
-        sleep(0.5) # Give the browser time to execute the copy command
+        if llm == 'gemini':
+            sleep(5) # Give the browser time to execute the copy command
+        else:
+            sleep(1)
+
         if debug: print("Closing tab...")
         pyautogui.hotkey('ctrl', 'w')
         sleep(0.5) # Allow tab to close fully
@@ -334,13 +338,13 @@ if __name__ == "__main__":
     print("Running talkto example...")
     # Ensure optimisewait images for 'gemini' are available
     # in talktollm/images/gemini/message.png, run.png, copy.png
-    response_text = talkto('deepseek', 'Explain the difference between a list and a tuple in Python.', debug=True)
+    response_text = talkto('gemini', 'Explain the difference between a list and a tuple in Python.', debug=True)
     print("\n--- LLM Response (Text) ---")
     print(response_text)
     print("---------------------------\n")
 
         
-    dummy_img = Image.new('RGB', (60, 30), color = 'red')
+    """ dummy_img = Image.new('RGB', (60, 30), color = 'red')
     buffered = io.BytesIO()
     dummy_img.save(buffered, format="PNG")
     img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
@@ -350,4 +354,4 @@ if __name__ == "__main__":
     response_img = talkto('deepseek', 'Describe this image.', imagedata=[img_data_uri], debug=True)
     print("\n--- LLM Response (Image) ---")
     print(response_img)
-    print("----------------------------\n")
+    print("----------------------------\n") """
