@@ -3,65 +3,58 @@
 [![PyPI version](https://badge.fury.io/py/talktollm.svg)](https://badge.fury.io/py/talktollm)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A Python utility for interacting with large language models (LLMs) through a command-line interface. It leverages image recognition to automate interactions with LLM web interfaces, enabling seamless conversations and task execution.
+A Python utility for interacting with large language models (LLMs) through browser automation. It leverages image recognition to automate interactions with LLM web interfaces, enabling seamless conversations and task execution.
 
 ## Features
 
--   **Command-Line Interaction:** Provides a simple and intuitive command-line interface for interacting with LLMs.
--   **Automated Image Recognition:** Employs image recognition techniques (via `optimisewait`) to identify and interact with elements on the LLM interface. Includes fallback if `optimisewait` is not installed.
--   **Multi-LLM Support:** Currently supports DeepSeek and Gemini.
+-   **Simple Interface:** Provides a single, intuitive function for interacting with LLMs.
+-   **Automated Image Recognition:** Employs image recognition (`optimisewait`) to identify and interact with elements on the LLM interface.
+-   **Multi-LLM Support:** Supports DeepSeek, Gemini, and Google AI Studio.
 -   **Automated Conversations:** Facilitates automated conversations and task execution by simulating user interactions.
--   **Image Support:** Allows sending images (base64 encoded) to the LLM.
--   **Robust Clipboard Handling:** Includes configurable retry mechanisms (default 5 retries) for setting text/images to the clipboard and reading text from the clipboard to handle access errors and timing issues.
--   **Dynamic Image Path Management:** Copies necessary recognition images to a temporary directory, ensuring they are accessible and up-to-date.
+-   **Image Support:** Allows sending one or more images (as base64 data URIs) to the LLM.
+-   **Robust Clipboard Handling:** Includes retry mechanisms for setting and getting clipboard data, handling common access errors and timing issues.
+-   **Self-Healing Image Cache:** Creates a clean, temporary image cache for each run, preventing issues from stale or corrupted recognition assets.
 -   **Easy to use:** Designed for simple setup and usage.
 
 ## Core Functionality
 
-The core function is `talkto(llm, prompt, imagedata=None, debug=False, tabswitch=True, read_retries=5, read_delay=0.3)`.
+The core function is `talkto(llm, prompt, imagedata=None, debug=False, tabswitch=True)`.
 
 **Arguments:**
 
--   `llm` (str): The LLM name ('deepseek','gemini' or 'aistudio').
--   `prompt` (str): The text prompt.
--   `imagedata` (list[str] | None): Optional list of base64 encoded image strings (e.g., "data:image/png;base64,...").
+-   `llm` (str): The LLM name ('deepseek', 'gemini', or 'aistudio').
+-   `prompt` (str): The text prompt to send.
+-   `imagedata` (list[str] | None): Optional list of base64 encoded image data URIs (e.g., "data:image/png;base64,...").
 -   `debug` (bool): Enable detailed console output. Defaults to `False`.
 -   `tabswitch` (bool): Switch focus back to the previous window after closing the LLM tab. Defaults to `True`.
--   `read_retries` (int): Number of attempts to read the final response from the clipboard. Defaults to 5.
--   `read_delay` (float): Delay in seconds between clipboard read attempts. Defaults to 0.3.
 
 **Steps:**
 
 1.  Validates the LLM name.
-2.  Sets up image paths for `optimisewait` using `set_image_path`.
+2.  Ensures a clean temporary image cache is ready for `optimisewait`.
 3.  Opens the LLM's website in a new browser tab.
-4.  Waits and clicks the message input area using `optimiseWait('message', clicks=2)`.
-5.  If `imagedata` is provided:
-    -   Iterates through images.
-    -   Sets each image to the clipboard using `set_clipboard_image` (with retries).
-    -   Pastes the image (`Ctrl+V`).
-    -   Waits for potential upload (`sleep(7)`).
-6.  Sets the `prompt` text to the clipboard using `set_clipboard` (with retries).
-7.  Pastes the prompt (`Ctrl+V`).
-8.  Waits and clicks the 'run' button using `optimiseWait('run')`.
-9.  Waits for the response generation, using `optimiseWait('copy')` as an indicator that the response is ready and the copy button is visible.
-10. Waits briefly (`sleep(0.5)`) after `optimiseWait('copy')` clicks the copy button.
+4.  Waits for and clicks the message input area.
+5.  If `imagedata` is provided, it pastes each image into the input area.
+6.  Pastes the `prompt` text.
+7.  Clicks the 'run' or 'send' button.
+8.  Sets a placeholder value on the clipboard.
+9.  Waits for the 'copy' button to appear (indicating the response is ready) and clicks it.
+10. Polls the clipboard until its content changes from the placeholder value.
 11. Closes the browser tab (`Ctrl+W`).
 12. Switches focus back if `tabswitch` is `True` (`Alt+Tab`).
-13. Attempts to read the LLM's response from the clipboard with retry logic (`read_retries`, `read_delay`).
-14. Returns the retrieved text response, or an empty string if reading fails.
+13. Returns the retrieved text response, or an empty string if the process times out.
 
 ## Helper Functions
 
 **Clipboard Handling:**
 
--   `set_clipboard(text: str, retries: int = 5, delay: float = 0.2)`: Sets text to the clipboard, handling `CF_UNICODETEXT`. Retries on common access errors (`winerror 5` or `1418`).
--   `set_clipboard_image(image_data: str, retries: int = 5, delay: float = 0.2)`: Sets a base64 encoded image to the clipboard (`CF_DIB` format). Decodes, converts to BMP, and retries on common access errors.
+-   `set_clipboard(text: str, retries: int = 5, delay: float = 0.2)`: Sets text to the clipboard. Retries on common access errors.
+-   `set_clipboard_image(image_data: str, retries: int = 5, delay: float = 0.2)`: Sets a base64 encoded image to the clipboard. Retries on common access errors.
+-   `_get_clipboard_content(...)`: Internal helper to read text from the clipboard with retry logic.
 
 **Image Path Management:**
 
--   `set_image_path(llm: str, debug: bool = False)`: Orchestrates copying images.
--   `copy_images_to_temp(llm: str, debug: bool = False)`: Copies necessary `.png` images for the specified `llm` from the package's `images/<llm>` directory to a temporary location (`%TEMP%\\talktollm_images\\<llm>`). Creates the temporary directory if needed and only copies if the source file is newer or the destination doesn't exist. Sets the `optimisewait` autopath. Includes error handling for missing package resources.
+-   `copy_images_to_temp(llm: str, debug: bool = False)`: **Deletes and recreates** the LLM-specific temporary image folder to ensure a clean state. Copies necessary `.png` images from the package's internal `images/` directory to the temporary location.
 
 ## Installation
 
@@ -90,14 +83,14 @@ print(response)
 
 **Example 2: Text Prompt with Debugging**
 
-Send a text prompt and enable debugging output to see more details about the process.
+Send a text prompt to AI Studio and enable debugging output.
 
 ```python
 import talktollm
 
 prompt_text = "What are the main features of Python 3.12?"
-response = talktollm.talkto('deepseek', prompt_text, debug=True)
-print("--- DeepSeek Debug Response ---")
+response = talktollm.talkto('aistudio', prompt_text, debug=True)
+print("--- AI Studio Debug Response ---")
 print(response)
 ```
 
@@ -107,8 +100,6 @@ Load an image file, encode it in base64, and format it correctly for the `imaged
 
 ```python
 import base64
-import io
-from PIL import Image
 
 # Load your image (replace 'path/to/your/image.png' with the actual path)
 try:
@@ -118,12 +109,8 @@ try:
         # Format as a data URI
         image_data_uri = f"data:image/png;base64,{encoded_string}"
         print("Image prepared successfully!")
-        # You can now pass [image_data_uri] to the imagedata parameter
 except FileNotFoundError:
     print("Error: Image file not found. Please check the path.")
-    image_data_uri = None
-except Exception as e:
-    print(f"Error processing image: {e}")
     image_data_uri = None
 
 # This 'image_data_uri' variable holds the string needed for the next example
@@ -131,7 +118,7 @@ except Exception as e:
 
 **Example 4: Text and Image Prompt**
 
-Send a text prompt along with a prepared image to Gemini. (Assumes `image_data_uri` was successfully created in Example 3).
+Send a text prompt along with a prepared image to DeepSeek. (Assumes `image_data_uri` was successfully created in Example 3).
 
 ```python
 import talktollm
@@ -140,12 +127,12 @@ import talktollm
 if image_data_uri:
     prompt_text = "Describe the main subject of this image."
     response = talktollm.talkto(
-        'gemini',
+        'deepseek',
         prompt_text,
         imagedata=[image_data_uri], # Pass the image data as a list
         debug=True
     )
-    print("--- Gemini Image Response ---")
+    print("--- DeepSeek Image Response ---")
     print(response)
 else:
     print("Skipping image example because image data is not available.")
@@ -154,9 +141,9 @@ else:
 ## Dependencies
 
 -   `pywin32`: For Windows API access (clipboard).
--   `pyautogui`: For GUI automation (keystrokes, potentially mouse if `optimisewait` fails).
--   `Pillow`: For image processing (opening, converting for clipboard).
--   `optimisewait` (Optional but Recommended): For robust image-based waiting and clicking.
+-   `pyautogui`: For GUI automation (keystrokes).
+-   `Pillow`: For image processing.
+-   `optimisewait` (Recommended): For robust image-based waiting and clicking.
 
 ## Contributing
 

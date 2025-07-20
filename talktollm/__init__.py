@@ -30,12 +30,18 @@ def set_image_path(llm: str, debug: bool = False):
     copy_images_to_temp(llm, debug=debug)
 
 def copy_images_to_temp(llm: str, debug: bool = False):
-    """Copies the necessary image files to a temporary directory."""
+    """
+    Copies the necessary image files to a temporary directory, ensuring a clean state.
+    """
     temp_dir = tempfile.gettempdir()
     image_path = os.path.join(temp_dir, 'talktollm_images', llm)
+
+    # Clean up the directory before use to ensure a pristine state
+    shutil.rmtree(image_path, ignore_errors=True)
     os.makedirs(image_path, exist_ok=True)
+    
     if debug:
-        print(f"Temporary image directory: {image_path}")
+        print(f"Cleaned and prepared temporary image directory: {image_path}")
 
     try:
         # Get the path to the original images directory within the package
@@ -176,8 +182,37 @@ def set_clipboard_image(image_data: str, retries: int = 5, delay: float = 0.2):
     print(f"Failed to set image to clipboard after {retries} attempts.")
     return False
 
+def _get_clipboard_content(retries: int = 3, delay: float = 0.2) -> str | None:
+    """Internal helper to read text from the clipboard with retry logic."""
+    last_error = None
+    for _ in range(retries):
+        try:
+            win32clipboard.OpenClipboard()
+            # Use CF_UNICODETEXT for expected text data
+            response = win32clipboard.GetClipboardData(win32clipboard.CF_UNICODETEXT)
+            win32clipboard.CloseClipboard()
+            return response  # Success
+        except (pywintypes.error, TypeError) as e:
+            last_error = e
+            try:
+                # Ensure clipboard is closed even on error
+                win32clipboard.CloseClipboard()
+            except pywintypes.error:
+                pass  # Ignore if it wasn't open
+            time.sleep(delay)
+        except Exception as e:
+            print(f"Unexpected critical error when reading clipboard: {e}")
+            try:
+                win32clipboard.CloseClipboard()
+            except pywintypes.error:
+                pass
+            raise # Re-raise other critical exceptions
+    # print(f"Failed to get clipboard content after retries. Last error: {last_error}") # Optional debug
+    return None # Return None on failure
+
 # --- MODIFIED talkto FUNCTION ---
-def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: bool = False, tabswitch: bool = True, read_retries: int = 5, read_delay: float = 0.3) -> str:
+# --- MODIFIED talkto FUNCTION ---
+def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: bool = False, tabswitch: bool = True) -> str:
     """
     Interacts with a specified Large Language Model (LLM) via browser automation.
 
@@ -187,66 +222,88 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         imagedata: Optional list of base64 encoded image strings.
         debug: Enable debugging output.
         tabswitch: Switch focus back after closing the LLM tab.
-        read_retries: Number of attempts to read the clipboard.
-        read_delay: Delay (seconds) between read retries.
 
     Returns:
         The LLM's response as a string, or an empty string if retrieval fails.
     """
     llm = llm.lower()
     if llm not in ['deepseek', 'gemini','aistudio']:
-        raise ValueError(f"Unsupported LLM: {llm}. Choose 'deepseek' or 'gemini'.")
+        raise ValueError(f"Unsupported LLM: {llm}. Choose 'deepseek' or 'gemini' or 'aistudio'.")
 
     set_image_path(llm, debug=debug) # Ensure images for optimiseWait are ready
 
     urls = {
         'deepseek': 'https://chat.deepseek.com/',
         'gemini': 'https://gemini.google.com/app',
-        'aistudio': 'https://aistudio.google.com/prompts/new_chat' # Or specific Gemini chat URL if available
+        'aistudio': 'https://aistudio.google.com/prompts/new_chat'
     }
 
     try:
         webbrowser.open_new_tab(urls[llm])
-        # Add a small delay to allow the browser tab to open and potentially load initial elements
-        sleep(2) # Adjust as needed
+        sleep(2) # Allow browser tab to open and load initial elements
 
-        optimiseWait(['message','ormessage','type3'], clicks=2) # Assumes 'message' image corresponds to the input field
+        optimiseWait(['message','ormessage','type3','message2'], clicks=2)
 
-        # If there are images, paste each one
         if imagedata:
             for i, img_b64 in enumerate(imagedata):
                 if debug: print(f"Processing image {i+1}/{len(imagedata)}")
                 if set_clipboard_image(img_b64):
                     pyautogui.hotkey('ctrl', 'v')
                     if debug: print(f"Pasted image {i+1}. Waiting for upload...")
-                    # Wait *after* pasting for potential upload indication or just a fixed time
-                    sleep(7) # Adjust based on typical upload time / LLM interface behavior
+                    sleep(7)
                 else:
                     print(f"Warning: Failed to set image {i+1} to clipboard. Skipping paste.")
-            # Add a small delay after the last image paste before pasting prompt
             sleep(0.5)
 
         if debug: print("Setting prompt to clipboard...")
-        set_clipboard(prompt) # Uses built-in retries
+        set_clipboard(prompt)
         if debug: print("Pasting prompt...")
         pyautogui.hotkey('ctrl', 'v')
 
-        sleep(1) # Allow paste to register
+        sleep(1)
 
         if debug: print("Clicking 'run'...")
-        optimiseWait('run') # Assumes 'run' image corresponds to the submit/send button
+        optimiseWait('run')
 
-        # Wait for the response to generate - this might need adjustment or a different optimisewait target
+        # Set a placeholder value to detect when the clipboard has been updated
+        placeholder = 'talktollm: awaiting response'
+        set_clipboard(placeholder)
+
         if debug: print("Waiting for LLM response generation (using 'copy' as proxy)...")
-        optimiseWait(['copy', 'orcopy','copy2']) # Assumes 'copy' image appears *after* response is generated and ready
+        # optimisewait clicks the copy button for us
+        print(optimiseWait(['copy', 'orcopy','copy2']))
 
-        # Click the copy button (optimiseWait already did this)
+        if debug: print("Copy clicked")
 
-        # Add a small explicit delay AFTER clicking copy, before closing tab
-        if llm == 'gemini':
-            sleep(5) # Give the browser time to execute the copy command
-        else:
-            sleep(1)
+        # --- NEW CODE: Wait for clipboard content to change ---
+        start_time = time.time()
+        timeout = 20  # seconds
+        poll_interval = 0.2  # seconds, to avoid high CPU usage
+
+        if debug:
+            print(f"Waiting for clipboard to update (timeout: {timeout}s)...")
+
+        response = ""
+        while time.time() - start_time < timeout:
+            clipboard_content = _get_clipboard_content() # Use our new helper
+
+            if clipboard_content is not None and clipboard_content != placeholder:
+                if debug:
+                    print(f"Clipboard updated successfully after {time.time() - start_time:.2f} seconds.")
+                response = clipboard_content
+                break # Exit the loop on success
+
+            time.sleep(poll_interval) # Wait before the next check
+        else: # This block runs if the while loop finishes without a 'break'
+            print(f"Timeout: Clipboard did not update within {timeout} seconds.")
+            # Clean up and return empty string on failure
+            pyautogui.hotkey('ctrl', 'w')
+            sleep(0.5)
+            if tabswitch:
+                pyautogui.hotkey('alt', 'tab')
+            return ""
+        # --- END OF NEW CODE ---
+
 
         if debug: print("Closing tab...")
         pyautogui.hotkey('ctrl', 'w')
@@ -256,81 +313,16 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
             if debug: print("Switching tab...")
             pyautogui.hotkey('alt', 'tab')
 
-        # --- Get LLM's response with retry logic ---
-        if debug: print("Attempting to read clipboard...")
-        response = None
-        last_error = None
-        for attempt in range(read_retries):
-            try:
-                win32clipboard.OpenClipboard()
-                # Crucially use CF_UNICODETEXT for expected text data
-                response = win32clipboard.GetClipboardData(win32clipboard.CF_UNICODETEXT)
-                win32clipboard.CloseClipboard()
-                if debug:
-                    print(f"Successfully retrieved clipboard data on attempt {attempt+1}")
-                break  # Success, exit the loop
-            except pywintypes.error as e:
-                last_error = e
-                if e.winerror == 5:  # Access is denied
-                    if debug:
-                        print(f"Clipboard access denied on read. Retrying in {read_delay}s... (Attempt {attempt+1}/{read_retries})")
-                # Handle case where clipboard might not be open yet after error
-                elif e.winerror == 1418: # ERROR_CLIPBOARD_NOT_OPEN
-                     if debug:
-                        print(f"Clipboard not open error on read. Retrying in {read_delay}s... (Attempt {attempt+1}/{read_retries})")
-                else:
-                    print(f"Unexpected pywintypes error when reading clipboard: {e}")
-                    try:
-                        win32clipboard.CloseClipboard() # Ensure closed even on unexpected error
-                    except pywintypes.error:
-                        pass # Ignore error if closing failed
-                    # Depending on severity, you might want to break or raise here
-                    # For now, we'll let it retry
-                try:
-                    # Ensure clipboard is closed if OpenClipboard succeeded but GetClipboardData failed with pywintypes error
-                    win32clipboard.CloseClipboard()
-                except pywintypes.error:
-                    pass # Ignore if it wasn't open
-                time.sleep(read_delay) # Wait before retrying
-
-            except TypeError as e:
-                 last_error = e
-                 # This often means the clipboard is empty or contains non-text data
-                 if debug:
-                     print(f"Clipboard empty or contains non-text data on attempt {attempt+1}. Retrying in {read_delay}s...")
-                 try:
-                     win32clipboard.CloseClipboard()
-                 except pywintypes.error:
-                     pass # Ignore error if closing failed because it wasn't open
-                 time.sleep(read_delay) # Wait and retry
-            except Exception as e:
-                last_error = e
-                print(f"Unexpected error when reading clipboard: {e}")
-                try:
-                    win32clipboard.CloseClipboard() # Ensure closed
-                except pywintypes.error:
-                    pass
-                raise # Re-raise other critical exceptions immediately
-        else: # This block executes if the loop completes without break
-            print(f"Failed to get clipboard data after {read_retries} attempts. Last error: {last_error}")
-            return "" # Return empty string on failure
-
-        if response is None:
-             print("Warning: Failed to retrieve response from clipboard (response is None).")
-             return ""
-
+        # The response is already in the 'response' variable from the loop above
         return response
 
     except Exception as e:
         print(f"An error occurred during the talkto process: {e}")
-        # Attempt to close clipboard just in case it was left open by an error
         try:
             win32clipboard.CloseClipboard()
         except pywintypes.error:
             pass
-        # Optionally re-raise the exception if you want the caller to handle it
-        # raise e
-        return "" # Return empty string or handle error as appropriate
+        return ""
 
 
 # Example usage (assuming this file is run directly or imported)

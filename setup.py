@@ -6,18 +6,18 @@ def read(fname):
 
 setup(
     name='talktollm',
-    version='0.4.2',
+    version='0.4.3',
     author="Alex M",
     author_email="alexmalone489@gmail.com", 
     description="A Python utility for interacting with large language models (LLMs) via web automation",
     long_description=read("README.md"),
     long_description_content_type="text/markdown",
     url="https://github.com/AMAMazing/talktollm",
-    keywords=["llm", "automation", "gui", "pyautogui", "gemini", "deepseek", "clipboard"],
+    keywords=["llm", "automation", "gui", "pyautogui", "gemini", "deepseek", "clipboard", "aistudio"],
     packages=find_packages(),
     include_package_data=True,
     package_data={
-        'talktollm': ['images/deepseek/*', 'images/gemini/*'],
+        'talktollm': ['images/deepseek/*', 'images/gemini/*', 'images/aistudio/*'],
     },
     install_requires=[
         'pywin32',
