@@ -271,7 +271,10 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
 
         if debug: print("Waiting for LLM response generation (using 'copy' as proxy)...")
         # optimisewait clicks the copy button for us
-        print(optimiseWait(['copy', 'orcopy','copy2']))
+        if debug:
+            print(optimiseWait(['copy', 'orcopy','copy2']))
+        else:
+            optimiseWait(['copy', 'orcopy','copy2'])
 
         if debug: print("Copy clicked")
 
