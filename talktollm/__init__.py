@@ -242,6 +242,11 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         webbrowser.open_new_tab(urls[llm])
         sleep(2) # Allow browser tab to open and load initial elements
 
+        if llm == 'aistudio':
+            optimiseWait('thinking', xoff=175)
+            optimiseWait('8192', clicks=2)
+            pyautogui.typewrite('32768')
+
         optimiseWait(['message','ormessage','type3','message2'], clicks=2)
 
         if imagedata:
@@ -333,7 +338,7 @@ if __name__ == "__main__":
     print("Running talkto example...")
     # Ensure optimisewait images for 'gemini' are available
     # in talktollm/images/gemini/message.png, run.png, copy.png
-    response_text = talkto('gemini', 'Explain the difference between a list and a tuple in Python.', debug=True)
+    response_text = talkto('aistudio', 'Explain the difference between a list and a tuple in Python with emojis and only emojis, no text. Put your entire response in a md codeblock', debug=True)
     print("\n--- LLM Response (Text) ---")
     print(response_text)
     print("---------------------------\n")
