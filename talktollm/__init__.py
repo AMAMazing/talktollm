@@ -245,9 +245,9 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
 
         if llm == 'aistudio':
             optimiseWait('chrome', dontwait=True)
-            optimiseWait('thinking', xoff=175)
+            """ optimiseWait('thinking', xoff=175)
             optimiseWait(['8192','thatnumagain'], clicks=2)
-            pyautogui.typewrite('32768')
+            pyautogui.typewrite('32768') """
 
         optimiseWait(['message','ormessage','type3','message2'], clicks=2)
 
