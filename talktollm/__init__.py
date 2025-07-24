@@ -240,11 +240,13 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
 
     try:
         webbrowser.open_new_tab(urls[llm])
-        sleep(2) # Allow browser tab to open and load initial elements
+        sleep(1) # Allow browser tab to open and load initial elements
+
 
         if llm == 'aistudio':
+            optimiseWait('chrome', dontwait=True)
             optimiseWait('thinking', xoff=175)
-            optimiseWait('8192', clicks=2)
+            optimiseWait(['8192','thatnumagain'], clicks=2)
             pyautogui.typewrite('32768')
 
         optimiseWait(['message','ormessage','type3','message2'], clicks=2)
