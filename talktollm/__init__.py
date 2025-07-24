@@ -240,7 +240,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
 
     try:
         webbrowser.open_new_tab(urls[llm])
-        sleep(1) # Allow browser tab to open and load initial elements
+        sleep(2) # Allow browser tab to open and load initial elements
 
 
         if llm == 'aistudio':
