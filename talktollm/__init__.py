@@ -267,7 +267,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         if debug: print("Pasting prompt...")
         pyautogui.hotkey('ctrl', 'v')
 
-        sleep(1)
+        sleep(2.5)
 
         if debug: print("Clicking 'run'...")
         optimiseWait('run')
@@ -279,9 +279,9 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         if debug: print("Waiting for LLM response generation (using 'copy' as proxy)...")
         # optimisewait clicks the copy button for us
         if debug:
-            print(optimiseWait(['copy', 'orcopy','copy2']))
+            print(optimiseWait(['copy', 'orcopy','copy2','copy3','cop4']))
         else:
-            optimiseWait(['copy', 'orcopy','copy2'])
+            optimiseWait(['copy', 'orcopy','copy2','cop4','copy3'])
 
         if debug: print("Copy clicked")
 
