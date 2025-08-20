@@ -243,11 +243,11 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         sleep(2) # Allow browser tab to open and load initial elements
 
 
-        if llm == 'aistudio':
-            optimiseWait('chrome', dontwait=True)
-            """ optimiseWait('thinking', xoff=175)
-            optimiseWait(['8192','thatnumagain'], clicks=2)
-            pyautogui.typewrite('32768') """
+        
+        optimiseWait('chrome', dontwait=True)
+        """ optimiseWait('thinking', xoff=175)
+        optimiseWait(['8192','thatnumagain'], clicks=2)
+        pyautogui.typewrite('32768') """
 
         optimiseWait(['message','ormessage','type3','message2'], clicks=2)
 
@@ -270,7 +270,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         sleep(2.5)
 
         if debug: print("Clicking 'run'...")
-        optimiseWait('run')
+        optimiseWait(['run','rundark'])
 
         # Set a placeholder value to detect when the clipboard has been updated
         placeholder = 'talktollm: awaiting response'
