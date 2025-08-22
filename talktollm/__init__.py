@@ -270,7 +270,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         sleep(2.5)
 
         if debug: print("Clicking 'run'...")
-        optimiseWait(['run','rundark'])
+        optimiseWait(['run','rundark','realrundark'])
 
         # Set a placeholder value to detect when the clipboard has been updated
         placeholder = 'talktollm: awaiting response'

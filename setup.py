@@ -6,7 +6,7 @@ def read(fname):
 
 setup(
     name='talktollm',
-    version='0.5.0',
+    version='0.5.1',
     author="Alex M",
     author_email="alexmalone489@gmail.com", 
     description="A Python utility for interacting with large language models (LLMs) via web automation",
