@@ -14,6 +14,7 @@ talktollm/images/aistudio/chrome.png
 talktollm/images/aistudio/cop4.png
 talktollm/images/aistudio/copy.png
 talktollm/images/aistudio/copy2.png
+talktollm/images/aistudio/copyorsmthn.png
 talktollm/images/aistudio/done.png
 talktollm/images/aistudio/message.png
 talktollm/images/aistudio/message2.png
@@ -25,6 +26,7 @@ talktollm/images/aistudio/rundark.png
 talktollm/images/aistudio/thatnumagain.png
 talktollm/images/aistudio/thinking.png
 talktollm/images/aistudio/type3.png
+talktollm/images/aistudio/typeytype.png
 talktollm/images/deepseek/chrome.png
 talktollm/images/deepseek/copy.png
 talktollm/images/deepseek/message.png

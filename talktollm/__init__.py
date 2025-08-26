@@ -249,7 +249,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         optimiseWait(['8192','thatnumagain'], clicks=2)
         pyautogui.typewrite('32768') """
 
-        optimiseWait(['message','ormessage','type3','message2'], clicks=2)
+        optimiseWait(['message','ormessage','type3','message2','typeytype'], clicks=2)
 
         if imagedata:
             for i, img_b64 in enumerate(imagedata):
@@ -279,9 +279,9 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         if debug: print("Waiting for LLM response generation (using 'copy' as proxy)...")
         # optimisewait clicks the copy button for us
         if debug:
-            print(optimiseWait(['copy', 'orcopy','copy2','copy3','cop4']))
+            print(optimiseWait(['copy', 'orcopy','copy2','copy3','cop4','copyorsmthn']))
         else:
-            optimiseWait(['copy', 'orcopy','copy2','cop4','copy3'])
+            optimiseWait(['copy', 'orcopy','copy2','cop4','copy3','cop4','copyorsmthn'])
 
         if debug: print("Copy clicked")
 
