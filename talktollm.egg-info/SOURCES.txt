@@ -23,6 +23,7 @@ talktollm/images/aistudio/ormessage.png
 talktollm/images/aistudio/realrundark.png
 talktollm/images/aistudio/run.png
 talktollm/images/aistudio/rundark.png
+talktollm/images/aistudio/runsmthn.png
 talktollm/images/aistudio/thatnumagain.png
 talktollm/images/aistudio/thinking.png
 talktollm/images/aistudio/type3.png

@@ -266,11 +266,14 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         set_clipboard(prompt)
         if debug: print("Pasting prompt...")
         pyautogui.hotkey('ctrl', 'v')
-
-        sleep(2.5)
+        
+        if imagedata:
+            sleep(5)
+        else:
+            sleep(0.25)
 
         if debug: print("Clicking 'run'...")
-        optimiseWait(['run','rundark','realrundark'])
+        optimiseWait(['run'],confidencelvl=0.97)
 
         # Set a placeholder value to detect when the clipboard has been updated
         placeholder = 'talktollm: awaiting response'
