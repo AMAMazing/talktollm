@@ -240,7 +240,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
 
     try:
         webbrowser.open_new_tab(urls[llm])
-        sleep(2) # Allow browser tab to open and load initial elements
+        sleep(1) # Allow browser tab to open and load initial elements
 
 
         
@@ -267,13 +267,9 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         if debug: print("Pasting prompt...")
         pyautogui.hotkey('ctrl', 'v')
         
-        if imagedata:
-            sleep(5)
-        else:
-            sleep(0.25)
+        sleep(0.5)
 
-        if debug: print("Clicking 'run'...")
-        optimiseWait(['run'],confidencelvl=0.97)
+        pyautogui.hotkey('ctrl','enter')
 
         # Set a placeholder value to detect when the clipboard has been updated
         placeholder = 'talktollm: awaiting response'
