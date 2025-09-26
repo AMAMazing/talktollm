@@ -269,7 +269,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         
         sleep(0.5)
 
-        pyautogui.hotkey('ctrl','enter')
+        pyautogui.press('enter')
 
         # Set a placeholder value to detect when the clipboard has been updated
         placeholder = 'talktollm: awaiting response'
@@ -333,6 +333,9 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
             pass
         return ""
 
+""" def designwith(llm, prompt, reruns=1, save_to=None):
+    webbrowser open https://aistudio.google.com/prompts/new_chat?model=gemini-2.5-flash-image-preview
+     """
 
 # Example usage (assuming this file is run directly or imported)
 if __name__ == "__main__":
