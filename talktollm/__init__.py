@@ -210,8 +210,6 @@ def _get_clipboard_content(retries: int = 3, delay: float = 0.2) -> str | None:
     # print(f"Failed to get clipboard content after retries. Last error: {last_error}") # Optional debug
     return None # Return None on failure
 
-# --- MODIFIED talkto FUNCTION ---
-# --- MODIFIED talkto FUNCTION ---
 def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: bool = False, tabswitch: bool = True) -> str:
     """
     Interacts with a specified Large Language Model (LLM) via browser automation.
@@ -226,28 +224,31 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
     Returns:
         The LLM's response as a string, or an empty string if retrieval fails.
     """
-    llm = llm.lower()
-    if llm not in ['deepseek', 'gemini','aistudio']:
-        raise ValueError(f"Unsupported LLM: {llm}. Choose 'deepseek' or 'gemini' or 'aistudio'.")
 
-    set_image_path(llm, debug=debug) # Ensure images for optimiseWait are ready
+    llm = llm.lower()
+    imgpath = ''
+
+    if llm == 'nanobanana':
+        imgpath = 'aistudio'
+    elif llm not in ['deepseek', 'gemini','aistudio', 'nanobanana']:
+        raise ValueError(f"Unsupported LLM: {llm}. Choose 'deepseek', 'gemini', 'aistudio', or 'nanobanana'.")
+    else:
+        imgpath = llm
+
+    set_image_path(imgpath, debug=debug) # Ensure images for optimiseWait are ready
 
     urls = {
         'deepseek': 'https://chat.deepseek.com/',
         'gemini': 'https://gemini.google.com/app',
-        'aistudio': 'https://aistudio.google.com/prompts/new_chat'
+        'aistudio': 'https://aistudio.google.com/prompts/new_chat?model=gemini-2.5-pro',
+        'nanobanana': 'https://aistudio.google.com/prompts/new_chat?model=gemini-2.5-flash-image-preview'
     }
 
     try:
         webbrowser.open_new_tab(urls[llm])
-        sleep(1) # Allow browser tab to open and load initial elements
-
-
+        sleep(0.5) # Allow browser tab to open and load initial elements
         
         optimiseWait('chrome', dontwait=True)
-        """ optimiseWait('thinking', xoff=175)
-        optimiseWait(['8192','thatnumagain'], clicks=2)
-        pyautogui.typewrite('32768') """
 
         optimiseWait(['message','ormessage','type3','message2','typeytype'], clicks=2)
 
@@ -272,57 +273,75 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         pyautogui.press('enter')
 
         # Set a placeholder value to detect when the clipboard has been updated
-        placeholder = 'talktollm: awaiting response'
-        set_clipboard(placeholder)
+        set_clipboard('talktollm: awaiting response')
+        # Get the sequence number *after* setting the placeholder
+        initial_sequence_number = win32clipboard.GetClipboardSequenceNumber()
 
         if debug: print("Waiting for LLM response generation (using 'copy' as proxy)...")
         # optimisewait clicks the copy button for us
+        result = optimiseWait(['copy', 'orcopy','copy2','copy3','cop4','copyorsmthn','copyimage'], clicks=0)
         if debug:
-            print(optimiseWait(['copy', 'orcopy','copy2','copy3','cop4','copyorsmthn']))
-        else:
-            optimiseWait(['copy', 'orcopy','copy2','cop4','copy3','cop4','copyorsmthn'])
+            print(result)
+
+        sleep(1)
+
+        result = optimiseWait(['copy', 'orcopy','copy2','copy3','cop4','copyorsmthn','copyimage'])
+        if debug:
+            print(result)
 
         if debug: print("Copy clicked")
 
-        # --- NEW CODE: Wait for clipboard content to change ---
+        # --- REVISED LOGIC: Wait for clipboard content to change using sequence number ---
         start_time = time.time()
         timeout = 20  # seconds
-        poll_interval = 0.2  # seconds, to avoid high CPU usage
+        poll_interval = 0.2  # seconds
 
         if debug:
-            print(f"Waiting for clipboard to update (timeout: {timeout}s)...")
+            print(f"Waiting for clipboard to update (timeout: {timeout}s)... Initial sequence: {initial_sequence_number}")
 
         response = ""
         while time.time() - start_time < timeout:
-            clipboard_content = _get_clipboard_content() # Use our new helper
-
-            if clipboard_content is not None and clipboard_content != placeholder:
+            current_sequence_number = win32clipboard.GetClipboardSequenceNumber()
+            # If the sequence number is different, the clipboard has changed.
+            if current_sequence_number != initial_sequence_number:
                 if debug:
-                    print(f"Clipboard updated successfully after {time.time() - start_time:.2f} seconds.")
-                response = clipboard_content
-                break # Exit the loop on success
+                    print(f"Clipboard changed! Sequence number updated from {initial_sequence_number} to {current_sequence_number}.")
+
+                # Now that we know it changed, try to get the content as text.
+                clipboard_content = _get_clipboard_content()
+
+                if clipboard_content is not None:
+                    # Successfully retrieved text content
+                    response = clipboard_content
+                    if debug:
+                        print(f"Clipboard updated with TEXT successfully after {time.time() - start_time:.2f} seconds.")
+                else:
+                    # Clipboard changed, but it's not text (it's an image or other format).
+                    # We can't return the image data, so we return a success message.
+                    response = "[Image copied to clipboard]"
+                    if debug:
+                        print(f"Clipboard updated with non-text data (likely IMAGE) after {time.time() - start_time:.2f} seconds.")
+                
+                break # Exit the loop on successful detection
 
             time.sleep(poll_interval) # Wait before the next check
-        else: # This block runs if the while loop finishes without a 'break'
+        else: # This block runs if the while loop finishes without a 'break' (i.e., times out)
             print(f"Timeout: Clipboard did not update within {timeout} seconds.")
-            # Clean up and return empty string on failure
             pyautogui.hotkey('ctrl', 'w')
             sleep(0.5)
             if tabswitch:
                 pyautogui.hotkey('alt', 'tab')
             return ""
-        # --- END OF NEW CODE ---
-
+        # --- END OF REVISED LOGIC ---
 
         if debug: print("Closing tab...")
         pyautogui.hotkey('ctrl', 'w')
-        sleep(0.5) # Allow tab to close fully
+        sleep(0.5)
 
         if tabswitch:
             if debug: print("Switching tab...")
             pyautogui.hotkey('alt', 'tab')
 
-        # The response is already in the 'response' variable from the loop above
         return response
 
     except Exception as e:
@@ -332,17 +351,13 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         except pywintypes.error:
             pass
         return ""
-
-""" def designwith(llm, prompt, reruns=1, save_to=None):
-    webbrowser open https://aistudio.google.com/prompts/new_chat?model=gemini-2.5-flash-image-preview
-     """
-
+    
 # Example usage (assuming this file is run directly or imported)
 if __name__ == "__main__":
     print("Running talkto example...")
     # Ensure optimisewait images for 'gemini' are available
     # in talktollm/images/gemini/message.png, run.png, copy.png
-    response_text = talkto('aistudio', 'Explain the difference between a list and a tuple in Python with emojis and only emojis, no text. Put your entire response in a md codeblock', debug=True)
+    response_text = talkto('nanobanana', 'Create a comic in a display of an old school comic book shop about a superman called snooker table man. Show only the cover.', debug=True)
     print("\n--- LLM Response (Text) ---")
     print(response_text)
     print("---------------------------\n")
