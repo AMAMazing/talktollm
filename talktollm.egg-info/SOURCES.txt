@@ -30,6 +30,7 @@ talktollm/images/aistudio/thatnumagain.png
 talktollm/images/aistudio/thinking.png
 talktollm/images/aistudio/type3.png
 talktollm/images/aistudio/typeytype.png
+talktollm/images/aistudio/tyre.png
 talktollm/images/deepseek/chrome.png
 talktollm/images/deepseek/copy.png
 talktollm/images/deepseek/message.png

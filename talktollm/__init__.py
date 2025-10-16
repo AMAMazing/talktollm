@@ -253,7 +253,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         if llm == 'aistudio':
             optimiseWait(['aistudio'], clicks=0)
 
-        optimiseWait(['message','ormessage','type3','message2','typeytype'], clicks=2)
+        optimiseWait(['message','ormessage','type3','message2','typeytype','tyre'], clicks=2, interrupter='chrome')
 
         if imagedata:
             for i, img_b64 in enumerate(imagedata):

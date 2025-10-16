@@ -1,5 +1,3 @@
-from optimisewait import optimiseWait,set_autopath
+from talktollm import talkto
 
-set_autopath(r'D:\talktollm\talktollm\images\aistudio')
-
-optimiseWait('thinking', xoff=175)
+talkto('aistudio','hi',debug=True)
