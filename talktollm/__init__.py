@@ -274,6 +274,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         sleep(0.5)
 
         pyautogui.press('enter')
+        pyautogui.hotkey('ctrl', 'enter')
 
         # Set a placeholder value to detect when the clipboard has been updated
         set_clipboard('talktollm: awaiting response')
