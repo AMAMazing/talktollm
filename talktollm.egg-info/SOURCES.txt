@@ -11,6 +11,7 @@ talktollm.egg-info/requires.txt
 talktollm.egg-info/top_level.txt
 talktollm/images/aistudio/8192.png
 talktollm/images/aistudio/aistudio.png
+talktollm/images/aistudio/aistudio2.png
 talktollm/images/aistudio/chrome.png
 talktollm/images/aistudio/cop4.png
 talktollm/images/aistudio/copy.png

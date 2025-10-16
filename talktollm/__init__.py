@@ -247,13 +247,8 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
     try:
         webbrowser.open_new_tab(urls[llm])
         sleep(0.5) # Allow browser tab to open and load initial elements
-        
-        optimiseWait('chrome', dontwait=True)
 
-        if llm == 'aistudio':
-            optimiseWait(['aistudio'], clicks=0)
-
-        optimiseWait(['message','ormessage','type3','message2','typeytype','tyre'], clicks=2, interrupter='chrome')
+        optimiseWait(['message','ormessage','type3','message2','typeytype','tyre'], clicks=2, interrupter=['chrome','aistudio','aistudio2'], interrupterclicks=[1,0,0])
 
         if imagedata:
             for i, img_b64 in enumerate(imagedata):
@@ -358,13 +353,15 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
     
 # Example usage (assuming this file is run directly or imported)
 if __name__ == "__main__":
-    print("Running talkto example...")
+    talkto('aistudio','hi',debug=True)
+
+    """print("Running talkto example...")
     # Ensure optimisewait images for 'gemini' are available
     # in talktollm/images/gemini/message.png, run.png, copy.png
     response_text = talkto('nanobanana', 'Create a comic in a display of an old school comic book shop about a superman called snooker table man. Show only the cover.', debug=True)
     print("\n--- LLM Response (Text) ---")
     print(response_text)
-    print("---------------------------\n")
+    print("---------------------------\n")"""
 
         
     """ dummy_img = Image.new('RGB', (60, 30), color = 'red')
@@ -378,3 +375,5 @@ if __name__ == "__main__":
     print("\n--- LLM Response (Image) ---")
     print(response_img)
     print("----------------------------\n") """
+
+
