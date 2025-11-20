@@ -240,7 +240,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
     urls = {
         'deepseek': 'https://chat.deepseek.com/',
         'gemini': 'https://gemini.google.com/app',
-        'aistudio': 'https://aistudio.google.com/prompts/new_chat?model=gemini-2.5-pro',
+        'aistudio': 'https://aistudio.google.com/prompts/new_chat?model=gemini-3-pro-preview',
         'nanobanana': 'https://aistudio.google.com/prompts/new_chat?model=gemini-2.5-flash-image-preview'
     }
 
@@ -353,7 +353,6 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
     
 # Example usage (assuming this file is run directly or imported)
 if __name__ == "__main__":
-    talkto('aistudio','hi',debug=True)
 
     """print("Running talkto example...")
     # Ensure optimisewait images for 'gemini' are available
@@ -364,16 +363,14 @@ if __name__ == "__main__":
     print("---------------------------\n")"""
 
         
-    """ dummy_img = Image.new('RGB', (60, 30), color = 'red')
+    dummy_img = Image.new('RGB', (60, 30), color = 'red')
     buffered = io.BytesIO()
     dummy_img.save(buffered, format="PNG")
     img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
     img_data_uri = f"data:image/png;base64,{img_str}"
 
     print("Running talkto example with image...")
-    response_img = talkto('deepseek', 'Describe this image.', imagedata=[img_data_uri], debug=True)
+    response_img = talkto('aistudio', 'Describe this image.', imagedata=[img_data_uri], debug=True)
     print("\n--- LLM Response (Image) ---")
     print(response_img)
-    print("----------------------------\n") """
-
-
+    print("----------------------------\n") 
