@@ -30,6 +30,7 @@ talktollm/images/aistudio/runsmthn.png
 talktollm/images/aistudio/thatnumagain.png
 talktollm/images/aistudio/thinking.png
 talktollm/images/aistudio/type3.png
+talktollm/images/aistudio/typenew.png
 talktollm/images/aistudio/typeytype.png
 talktollm/images/aistudio/tyre.png
 talktollm/images/deepseek/chrome.png

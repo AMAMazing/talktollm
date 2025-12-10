@@ -248,7 +248,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         webbrowser.open_new_tab(urls[llm])
         sleep(0.5) # Allow browser tab to open and load initial elements
 
-        optimiseWait(['message','ormessage','type3','message2','typeytype','tyre'], clicks=2, interrupter=['chrome','aistudio','aistudio2'], interrupterclicks=[1,0,0])
+        optimiseWait(['message','ormessage','type3','message2','typeytype','tyre','typenew'], clicks=2, interrupter=['chrome','aistudio','aistudio2'], interrupterclicks=[1,0,0])
 
         if imagedata:
             for i, img_b64 in enumerate(imagedata):
