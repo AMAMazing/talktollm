@@ -31,6 +31,7 @@ talktollm/images/aistudio/thatnumagain.png
 talktollm/images/aistudio/thinking.png
 talktollm/images/aistudio/type3.png
 talktollm/images/aistudio/typenew.png
+talktollm/images/aistudio/typeplz.png
 talktollm/images/aistudio/typeytype.png
 talktollm/images/aistudio/tyre.png
 talktollm/images/deepseek/chrome.png
@@ -43,3 +44,4 @@ talktollm/images/gemini/message.png
 talktollm/images/gemini/message2.png
 talktollm/images/gemini/orcopy.png
 talktollm/images/gemini/run.png
+talktollm/images/gemini/send.png
