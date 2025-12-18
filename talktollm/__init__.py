@@ -266,7 +266,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         if debug: print("Pasting prompt...")
         pyautogui.hotkey('ctrl', 'v')
         
-        sleep(0.5)
+        sleep(1)
 
         pyautogui.press('enter')
         pyautogui.hotkey('ctrl', 'enter')
