@@ -41,6 +41,7 @@ talktollm/images/deepseek/message.png
 talktollm/images/deepseek/run.png
 talktollm/images/gemini/chrome.png
 talktollm/images/gemini/copy.png
+talktollm/images/gemini/copy2.png
 talktollm/images/gemini/message.png
 talktollm/images/gemini/message2.png
 talktollm/images/gemini/orcopy.png
