@@ -1,148 +1,135 @@
-# talktollm/__init__.py
-
 import time
 import win32clipboard
 import pywintypes
 import pyautogui
 import base64
 import io
-from PIL import Image
-import importlib.resources
+import json
 import tempfile
 import shutil
 import webbrowser
 import os
-from time import sleep # Explicitly import sleep if not already done
+import importlib.resources
+from datetime import datetime, timedelta
+from PIL import Image
+from time import sleep
 
-# Assuming optimisewait is correctly installed and available
+# Attempt to import optimisewait
 try:
     from optimisewait import optimiseWait, set_autopath
 except ImportError:
     print("Warning: 'optimisewait' library not found. Please install it.")
-    # Define dummy functions if optimisewait is not installed to avoid NameErrors
-    # You might want to raise an error or handle this differently
-    def set_autopath(path):
-        print(f"set_autopath called with '{path}' (dummy function).")
+    def set_autopath(path): pass
 
+# Constants
+STATE_FILE = os.path.join(os.path.expanduser("~"), ".talktollm_state.json")
+
+# --- Persistence Logic for Rate Limiting ---
+
+def _get_rate_limit_state(llm: str) -> bool:
+    """Checks if the specific LLM is currently marked as rate-limited (within 1 hour)."""
+    if not os.path.exists(STATE_FILE):
+        return False
+    try:
+        with open(STATE_FILE, 'r') as f:
+            data = json.load(f)
+            limit_time_str = data.get(llm)
+            if limit_time_str:
+                limit_time = datetime.fromisoformat(limit_time_str)
+                # If the limit happened less than 60 minutes ago, it's still active
+                if datetime.now() < limit_time + timedelta(hours=1):
+                    return True
+    except Exception:
+        pass
+    return False
+
+def _set_rate_limit_state(llm: str):
+    """Saves the current timestamp to the state file for the specified LLM."""
+    data = {}
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, 'r') as f:
+                data = json.load(f)
+        except: pass
+    
+    data[llm] = datetime.now().isoformat()
+    try:
+        with open(STATE_FILE, 'w') as f:
+            json.dump(data, f)
+    except Exception as e:
+        print(f"Error saving state file: {e}")
+
+# --- Image and Resource Setup ---
 
 def set_image_path(llm: str, debug: bool = False):
-    """Dynamically sets the image path for optimisewait based on package installation location."""
+    """Dynamically sets the image path for optimisewait."""
     copy_images_to_temp(llm, debug=debug)
 
 def copy_images_to_temp(llm: str, debug: bool = False):
-    """
-    Copies the necessary image files to a temporary directory, ensuring a clean state.
-    """
+    """Copies image files to a temp directory, prioritizing local dev files."""
     temp_dir = tempfile.gettempdir()
     image_path = os.path.join(temp_dir, 'talktollm_images', llm)
 
-    # Clean up the directory before use to ensure a pristine state
     shutil.rmtree(image_path, ignore_errors=True)
     os.makedirs(image_path, exist_ok=True)
     
-    if debug:
-        print(f"Cleaned and prepared temporary image directory: {image_path}")
-
     try:
-        # Get the path to the original images directory within the package
-        original_images_dir = importlib.resources.files('talktollm').joinpath('images')
-        original_image_path = original_images_dir / llm
-        if debug:
-            print(f"Original image directory: {original_image_path}")
+        # Check for local dev folder first
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        local_source = os.path.join(current_dir, 'images', llm)
 
-        # Check if the source directory exists before trying to list its contents
-        if not os.path.isdir(original_image_path):
-             print(f"Warning: Original image directory not found: {original_image_path}")
-             # Set autopath to the potentially empty temp dir anyway, or handle error
+        if os.path.isdir(local_source):
+            original_path = local_source
+            if debug: print(f"DEBUG: Using LOCAL images: {original_path}")
+        else:
+            # Fallback to installed package resources
+            res = importlib.resources.files('talktollm').joinpath('images')
+            original_path = str(res / llm)
+            if debug: print(f"DEBUG: Using INSTALLED images: {original_path}")
+
+        if not os.path.exists(original_path):
              set_autopath(image_path)
-             if debug:
-                 print(f"Autopath set to potentially empty dir: {image_path}")
              return
 
-        # Copy each file from the original directory to the temporary directory
-        for filename in os.listdir(original_image_path):
-            source_file = os.path.join(original_image_path, filename)
-            destination_file = os.path.join(image_path, filename)
-            # Ensure it's a file before copying
-            if os.path.isfile(source_file):
-                if not os.path.exists(destination_file) or os.path.getmtime(source_file) > os.path.getmtime(destination_file):
-                    if debug:
-                        print(f"Copying {source_file} to {destination_file}")
-                    shutil.copy2(source_file, destination_file)
-                elif debug:
-                    print(f"File already exists and is up-to-date: {destination_file}")
-            elif debug:
-                 print(f"Skipping non-file item: {source_file}")
+        for filename in os.listdir(original_path):
+            src = os.path.join(original_path, filename)
+            dst = os.path.join(image_path, filename)
+            if os.path.isfile(src):
+                shutil.copy2(src, dst)
 
         set_autopath(image_path)
-        if debug:
-            print(f"Autopath set to: {image_path}")
+        if debug: print(f"Autopath set to: {image_path}")
 
-    except FileNotFoundError:
-        print(f"Error: Could not find the 'talktollm' package resources. Ensure it's installed correctly.")
-        # Handle error appropriately, maybe raise it or set a default path
-        set_autopath(image_path) # Try setting path anyway
     except Exception as e:
-        print(f"An unexpected error occurred during image setup: {e}")
-        set_autopath(image_path) # Try setting path anyway
+        print(f"Error during image setup: {e}")
+        set_autopath(image_path)
 
+# --- Clipboard Helpers ---
 
 def set_clipboard(text: str, retries: int = 5, delay: float = 0.2):
-    """Sets text to the clipboard with retry logic for Access Denied errors."""
     for i in range(retries):
         try:
             win32clipboard.OpenClipboard()
             win32clipboard.EmptyClipboard()
-            # Use SetClipboardText with appropriate encoding handling
             win32clipboard.SetClipboardText(str(text), win32clipboard.CF_UNICODETEXT)
             win32clipboard.CloseClipboard()
-            # print(f"Debug: Clipboard set successfully on attempt {i+1}") # Optional debug
-            return  # Success
-        except pywintypes.error as e:
-            # error: (5, 'OpenClipboard', 'Access is denied.')
-            # error: (1418, 'SetClipboardData', 'The thread does not have open clipboard.') - might happen if Open failed
-            if e.winerror == 5 or e.winerror == 1418:
-                # print(f"Clipboard access denied/error setting text. Retrying... (Attempt {i+1}/{retries})") # Optional debug
-                try:
-                    # Ensure clipboard is closed if OpenClipboard succeeded but subsequent calls failed
-                    win32clipboard.CloseClipboard()
-                except pywintypes.error:
-                    pass # Ignore error if closing failed (it might not have been opened)
-                time.sleep(delay)
-            else:
-                print(f"Unexpected pywintypes error setting clipboard text: {e}")
-                try:
-                    win32clipboard.CloseClipboard()
-                except pywintypes.error:
-                    pass
-                raise  # Re-raise other pywintypes errors
-        except Exception as e:
-            print(f"Unexpected error setting clipboard text: {e}")
-            try:
-                win32clipboard.CloseClipboard()
-            except pywintypes.error:
-                pass
-            raise  # Re-raise other exceptions
-    print(f"Failed to set clipboard text after {retries} attempts.")
-    # Consider raising an exception here if clipboard setting is critical
-    # raise RuntimeError(f"Failed to set clipboard text after {retries} attempts.")
+            return
+        except pywintypes.error:
+            try: win32clipboard.CloseClipboard()
+            except: pass
+            time.sleep(delay)
 
 def set_clipboard_image(image_data: str, retries: int = 5, delay: float = 0.2):
-    """Sets image data (base64) to the clipboard with retry logic."""
-    image = None
     try:
-        # Decode base64 only once
-        binary_data = base64.b64decode(image_data.split(',', 1)[1]) # Use split with maxsplit=1
+        binary_data = base64.b64decode(image_data.split(',', 1)[1])
         image = Image.open(io.BytesIO(binary_data))
-
-        # Prepare BMP data only once
         output = io.BytesIO()
         image.convert("RGB").save(output, "BMP")
-        data = output.getvalue()[14:]  # Standard BMP header is 14 bytes
+        data = output.getvalue()[14:]
         output.close()
     except Exception as e:
-        print(f"Error processing image data before clipboard attempt: {e}")
-        return False # Cannot proceed if image data is invalid
+        print(f"Image processing error: {e}")
+        return False
 
     for attempt in range(retries):
         try:
@@ -150,233 +137,148 @@ def set_clipboard_image(image_data: str, retries: int = 5, delay: float = 0.2):
             win32clipboard.EmptyClipboard()
             win32clipboard.SetClipboardData(win32clipboard.CF_DIB, data)
             win32clipboard.CloseClipboard()
-            # print(f"Debug: Image set to clipboard successfully on attempt {attempt+1}") # Optional debug
-            return True # Success
-        except pywintypes.error as e:
-            if e.winerror == 5 or e.winerror == 1418:
-                # print(f"Clipboard access denied/error setting image. Retrying... (Attempt {attempt+1}/{retries})") # Optional debug
-                try:
-                    win32clipboard.CloseClipboard()
-                except pywintypes.error:
-                    pass
-                time.sleep(delay)
-            else:
-                print(f"Unexpected pywintypes error setting clipboard image: {e}")
-                try:
-                    win32clipboard.CloseClipboard()
-                except pywintypes.error:
-                    pass
-                # Decide whether to raise or just report failure
-                # raise e
-                return False # Indicate failure
-        except Exception as e:
-            print(f"Unexpected error setting clipboard image: {e}")
-            try:
-                win32clipboard.CloseClipboard()
-            except pywintypes.error:
-                pass
-            # Decide whether to raise or just report failure
-            # raise e
-            return False # Indicate failure
-
-    print(f"Failed to set image to clipboard after {retries} attempts.")
+            return True
+        except pywintypes.error:
+            try: win32clipboard.CloseClipboard()
+            except: pass
+            time.sleep(delay)
     return False
 
 def _get_clipboard_content(retries: int = 3, delay: float = 0.2) -> str | None:
-    """Internal helper to read text from the clipboard with retry logic."""
-    last_error = None
     for _ in range(retries):
         try:
             win32clipboard.OpenClipboard()
-            # Use CF_UNICODETEXT for expected text data
             response = win32clipboard.GetClipboardData(win32clipboard.CF_UNICODETEXT)
             win32clipboard.CloseClipboard()
-            return response  # Success
-        except (pywintypes.error, TypeError) as e:
-            last_error = e
-            try:
-                # Ensure clipboard is closed even on error
-                win32clipboard.CloseClipboard()
-            except pywintypes.error:
-                pass  # Ignore if it wasn't open
+            return response
+        except:
+            try: win32clipboard.CloseClipboard()
+            except: pass
             time.sleep(delay)
-        except Exception as e:
-            print(f"Unexpected critical error when reading clipboard: {e}")
-            try:
-                win32clipboard.CloseClipboard()
-            except pywintypes.error:
-                pass
-            raise # Re-raise other critical exceptions
-    # print(f"Failed to get clipboard content after retries. Last error: {last_error}") # Optional debug
-    return None # Return None on failure
+    return None
 
-def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: bool = False, tabswitch: bool = True) -> str:
+# --- Main Interaction Logic ---
+
+def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: bool = False, tabswitch: bool = True, cascade: bool = True) -> str:
     """
-    Interacts with a specified Large Language Model (LLM) via browser automation.
-
-    Args:
-        llm: The name of the LLM ('deepseek' or 'gemini').
-        prompt: The text prompt to send.
-        imagedata: Optional list of base64 encoded image strings.
-        debug: Enable debugging output.
-        tabswitch: Switch focus back after closing the LLM tab.
-
-    Returns:
-        The LLM's response as a string, or an empty string if retrieval fails.
+    Interacts with an LLM via browser. 
+    Supports 'cascade' to switch from AI Studio Pro to Flash if rate limited.
     """
-
     llm = llm.lower()
-    imgpath = ''
-
-    if llm == 'nanobanana':
-        imgpath = 'aistudio'
-    elif llm not in ['deepseek', 'gemini','aistudio', 'nanobanana']:
-        raise ValueError(f"Unsupported LLM: {llm}. Choose 'deepseek', 'gemini', 'aistudio', or 'nanobanana'.")
-    else:
-        imgpath = llm
-
-    set_image_path(imgpath, debug=debug) # Ensure images for optimiseWait are ready
-
+    
+    # URL Mapping
     urls = {
         'deepseek': 'https://chat.deepseek.com/',
         'gemini': 'https://gemini.google.com/app',
         'aistudio': 'https://aistudio.google.com/prompts/new_chat?model=gemini-3-pro-preview',
+        'aistudio_flash': 'https://aistudio.google.com/prompts/new_chat?model=gemini-3-flash-preview',
         'nanobanana': 'https://aistudio.google.com/prompts/new_chat?model=gemini-2.5-flash-image-preview'
     }
 
+    # 1. CASCADE PRE-CHECK
+    # Determine the actual model to use based on persistent rate-limit state
+    current_llm_key = llm
+    if cascade and llm == 'aistudio':
+        if _get_rate_limit_state('aistudio'):
+            if debug: print("DEBUG: 'aistudio' (Pro) is currently rate-limited. Cascading to Flash.")
+            current_llm_key = 'aistudio_flash'
+
+    if current_llm_key not in urls:
+        raise ValueError(f"Unsupported LLM: {llm}")
+
+    # Determine which folder of images to use for UI detection
+    img_folder = 'aistudio' if 'aistudio' in current_llm_key or current_llm_key == 'nanobanana' else current_llm_key
+    set_image_path(img_folder, debug=debug)
+
     try:
-        webbrowser.open_new_tab(urls[llm])
-        sleep(0.5) # Allow browser tab to open and load initial elements
+        if debug: print(f"Opening {current_llm_key}...")
+        webbrowser.open_new_tab(urls[current_llm_key])
+        sleep(0.5)
 
-        optimiseWait(['message','ormessage','type3','message2','typeytype','tyre','typenew', 'typeplz'], clicks=2, interrupter=['chrome','aistudio','aistudio2'], interrupterclicks=[1,0,0])
+        # Wait for the message input area to appear
+        optimiseWait(['message','ormessage','type3','message2','typeytype','tyre','typenew', 'typeplz'], 
+                     clicks=2, 
+                     interrupter=['chrome','aistudio','aistudio2'], 
+                     interrupterclicks=[1,0,0])
 
+        # Paste images
         if imagedata:
             for i, img_b64 in enumerate(imagedata):
-                if debug: print(f"Processing image {i+1}/{len(imagedata)}")
+                if debug: print(f"Pasting image {i+1}...")
                 if set_clipboard_image(img_b64):
                     pyautogui.hotkey('ctrl', 'v')
-                    if debug: print(f"Pasted image {i+1}. Waiting for upload...")
-                    sleep(7)
-                else:
-                    print(f"Warning: Failed to set image {i+1} to clipboard. Skipping paste.")
+                    sleep(7) # Wait for AI Studio/Gemini upload processing
             sleep(0.5)
 
-        if debug: print("Setting prompt to clipboard...")
-        set_clipboard(prompt)
+        # Paste text prompt
         if debug: print("Pasting prompt...")
+        set_clipboard(prompt)
         pyautogui.hotkey('ctrl', 'v')
-        
         sleep(1)
-
         pyautogui.press('enter')
         pyautogui.hotkey('ctrl', 'enter')
 
-        if llm == 'gemini':
+        if current_llm_key == 'gemini':
             optimiseWait('send')
 
-        # Set a placeholder value to detect when the clipboard has been updated
+        # Setup clipboard tracking
         set_clipboard('talktollm: awaiting response')
-        # Get the sequence number *after* setting the placeholder
-        initial_sequence_number = win32clipboard.GetClipboardSequenceNumber()
+        initial_seq = win32clipboard.GetClipboardSequenceNumber()
 
-        if debug: print("Waiting for LLM response generation (using 'copy' as proxy)...")
-        # optimisewait clicks the copy button for us
-        if llm == 'aistudio':
-            result = optimiseWait(['copy', 'orcopy','copy2','copy3','cop4','copyorsmthn','copyimage'], clicks=0,interrupter='scroll')
-        else:
-            result = optimiseWait(['copy', 'orcopy','copy2','copy3','cop4','copyorsmthn','copyimage'], clicks=0)
-        if debug:
-            print(result)
+        # 2. WAIT FOR COPY OR RATE LIMIT
+        if debug: print("Waiting for response (checking for Copy or Rate Limit)...")
+        
+        # We look for copy buttons OR the rate limit image
+        # clicks=0 means don't click yet, just find the image
+        search_results = optimiseWait(['copy', 'orcopy', 'copy2', 'copy3', 'cop4', 'copyorsmthn', 'copyimage', 'ratelimit'], 
+                                     clicks=0, 
+                                     interrupter='scroll')
 
+        # 3. CASCADE TRIGGER (If rate limited during the process)
+        if cascade and search_results.get('image') == 'ratelimit' and current_llm_key == 'aistudio':
+            if debug: print("DEBUG: Rate limit image detected! Switching to Flash.")
+            _set_rate_limit_state('aistudio')
+            pyautogui.hotkey('ctrl', 'w') # Close the current limited tab
+            sleep(1)
+            # RECURSIVE CALL: The pre-check at the top will now pick Flash
+            return talkto(llm, prompt, imagedata, debug, tabswitch, cascade)
+
+        # 4. PERFORM ACTUAL COPY
         sleep(1)
+        optimiseWait(['copy', 'orcopy','copy2','copy3','cop4','copyorsmthn','copyimage'])
+        if debug: print("Copy clicked.")
 
-        result = optimiseWait(['copy', 'orcopy','copy2','copy3','cop4','copyorsmthn','copyimage'])
-        if debug:
-            print(result)
-
-        if debug: print("Copy clicked")
-
-        # --- REVISED LOGIC: Wait for clipboard content to change using sequence number ---
+        # 5. RETRIEVE FROM CLIPBOARD
         start_time = time.time()
-        timeout = 20  # seconds
-        poll_interval = 0.2  # seconds
-
-        if debug:
-            print(f"Waiting for clipboard to update (timeout: {timeout}s)... Initial sequence: {initial_sequence_number}")
-
-        response = ""
+        timeout = 20
+        response_text = ""
+        
         while time.time() - start_time < timeout:
-            current_sequence_number = win32clipboard.GetClipboardSequenceNumber()
-            # If the sequence number is different, the clipboard has changed.
-            if current_sequence_number != initial_sequence_number:
-                if debug:
-                    print(f"Clipboard changed! Sequence number updated from {initial_sequence_number} to {current_sequence_number}.")
-
-                # Now that we know it changed, try to get the content as text.
-                clipboard_content = _get_clipboard_content()
-
-                if clipboard_content is not None:
-                    # Successfully retrieved text content
-                    response = clipboard_content
-                    if debug:
-                        print(f"Clipboard updated with TEXT successfully after {time.time() - start_time:.2f} seconds.")
-                else:
-                    # Clipboard changed, but it's not text (it's an image or other format).
-                    # We can't return the image data, so we return a success message.
-                    response = "[Image copied to clipboard]"
-                    if debug:
-                        print(f"Clipboard updated with non-text data (likely IMAGE) after {time.time() - start_time:.2f} seconds.")
-                
-                break # Exit the loop on successful detection
-
-            time.sleep(poll_interval) # Wait before the next check
-        else: # This block runs if the while loop finishes without a 'break' (i.e., times out)
-            print(f"Timeout: Clipboard did not update within {timeout} seconds.")
+            if win32clipboard.GetClipboardSequenceNumber() != initial_seq:
+                content = _get_clipboard_content()
+                response_text = content if content is not None else "[Data copied to clipboard]"
+                break
+            time.sleep(0.2)
+        else:
+            if debug: print("Timeout: Clipboard never updated.")
             pyautogui.hotkey('ctrl', 'w')
-            sleep(0.5)
-            if tabswitch:
-                pyautogui.hotkey('alt', 'tab')
             return ""
-        # --- END OF REVISED LOGIC ---
 
-        if debug: print("Closing tab...")
+        # Cleanup
+        if debug: print("Closing tab and finishing.")
         pyautogui.hotkey('ctrl', 'w')
         sleep(0.5)
-
         if tabswitch:
-            if debug: print("Switching tab...")
             pyautogui.hotkey('alt', 'tab')
 
-        return response
+        return response_text
 
     except Exception as e:
-        print(f"An error occurred during the talkto process: {e}")
-        try:
-            win32clipboard.CloseClipboard()
-        except pywintypes.error:
-            pass
+        print(f"Critical Error in talkto: {e}")
+        try: win32clipboard.CloseClipboard()
+        except: pass
         return ""
-    
-# Example usage (assuming this file is run directly or imported)
+
 if __name__ == "__main__":
-
-    """print("Running talkto example...")
-    # Ensure optimisewait images for 'gemini' are available
-    # in talktollm/images/gemini/message.png, run.png, copy.png
-    response_text = talkto('nanobanana', 'Create a comic in a display of an old school comic book shop about a superman called snooker table man. Show only the cover.', debug=True)
-    print("\n--- LLM Response (Text) ---")
-    print(response_text)
-    print("---------------------------\n")"""
-
-        
-    dummy_img = Image.new('RGB', (60, 30), color = 'red')
-    buffered = io.BytesIO()
-    dummy_img.save(buffered, format="PNG")
-    img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
-    img_data_uri = f"data:image/png;base64,{img_str}"
-
-    print("Running talkto example with image...")
-    response_img = talkto('aistudio', 'Describe this image.', imagedata=[img_data_uri], debug=True)
-    print("\n--- LLM Response (Image) ---")
-    print(response_img)
-    print("----------------------------\n") 
+    # Test call
+    print(talkto('aistudio', 'Hi, please tell me which model version you are.', debug=True))
