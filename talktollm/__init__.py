@@ -162,7 +162,8 @@ def _get_clipboard_content(retries: int = 3, delay: float = 0.2) -> str | None:
 def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: bool = False, tabswitch: bool = True, cascade: bool = True) -> str:
     """
     Interacts with an LLM via browser. 
-    Supports 'cascade' to switch from AI Studio Pro to Flash if rate limited.
+    Supports 'cascade' to switch through models if rate limited.
+    Chain: 3 Pro -> 3 Flash -> 2.5 Pro -> Flash Latest
     """
     llm = llm.lower()
     
@@ -172,22 +173,50 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         'gemini': 'https://gemini.google.com/app',
         'aistudio': 'https://aistudio.google.com/prompts/new_chat?model=gemini-3-pro-preview',
         'aistudio_flash': 'https://aistudio.google.com/prompts/new_chat?model=gemini-3-flash-preview',
+        'gemini_2_5_pro': 'https://aistudio.google.com/prompts/new_chat?model=gemini-2.5-pro',
+        'gemini_flash_latest': 'https://aistudio.google.com/prompts/new_chat?model=gemini-flash-latest',
         'nanobanana': 'https://aistudio.google.com/prompts/new_chat?model=gemini-2.5-flash-image-preview'
     }
 
+    # Define the fallback priority chain
+    CASCADE_CHAIN = ['aistudio', 'aistudio_flash', 'gemini_2_5_pro', 'gemini_flash_latest']
+
     # 1. CASCADE PRE-CHECK
-    # Determine the actual model to use based on persistent rate-limit state
     current_llm_key = llm
-    if cascade and llm == 'aistudio':
-        if _get_rate_limit_state('aistudio'):
-            if debug: print("DEBUG: 'aistudio' (Pro) is currently rate-limited. Cascading to Flash.")
-            current_llm_key = 'aistudio_flash'
+    
+    if cascade and llm in CASCADE_CHAIN:
+        # Find where we are starting in the chain
+        try:
+            start_index = CASCADE_CHAIN.index(llm)
+        except ValueError:
+            start_index = 0
+            
+        # Iterate through the chain to find the first NON-limited model
+        for i in range(start_index, len(CASCADE_CHAIN)):
+            candidate = CASCADE_CHAIN[i]
+            if _get_rate_limit_state(candidate):
+                if debug: print(f"DEBUG: '{candidate}' is rate-limited. Checking next fallback...")
+                continue
+            else:
+                current_llm_key = candidate
+                if debug and current_llm_key != llm:
+                    print(f"DEBUG: Cascaded to '{current_llm_key}'")
+                break
+        
+        # If all are limited, we default to the last one (or you could raise an error)
+        if _get_rate_limit_state(current_llm_key):
+             print("WARNING: All models in cascade chain appear to be rate limited. Trying last resort.")
 
     if current_llm_key not in urls:
         raise ValueError(f"Unsupported LLM: {llm}")
 
     # Determine which folder of images to use for UI detection
-    img_folder = 'aistudio' if 'aistudio' in current_llm_key or current_llm_key == 'nanobanana' else current_llm_key
+    # All AI Studio models share the same UI logic ('aistudio')
+    if current_llm_key in CASCADE_CHAIN or current_llm_key == 'nanobanana':
+        img_folder = 'aistudio'
+    else:
+        img_folder = current_llm_key
+
     set_image_path(img_folder, debug=debug)
 
     try:
@@ -229,18 +258,24 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         if debug: print("Waiting for response (checking for Copy or Rate Limit)...")
         
         # We look for copy buttons OR the rate limit image
-        # clicks=0 means don't click yet, just find the image
         search_results = optimiseWait(['copy', 'orcopy', 'copy2', 'copy3', 'cop4', 'copyorsmthn', 'copyimage', 'ratelimit'], 
                                      clicks=0, 
                                      interrupter='scroll')
 
         # 3. CASCADE TRIGGER (If rate limited during the process)
-        if cascade and search_results.get('image') == 'ratelimit' and current_llm_key == 'aistudio':
-            if debug: print("DEBUG: Rate limit image detected! Switching to Flash.")
-            _set_rate_limit_state('aistudio')
+        if cascade and search_results.get('image') == 'ratelimit' and current_llm_key in CASCADE_CHAIN:
+            if debug: print(f"DEBUG: Rate limit detected on {current_llm_key}! Switching to next fallback.")
+            
+            # Mark current model as limited
+            _set_rate_limit_state(current_llm_key)
+            
             pyautogui.hotkey('ctrl', 'w') # Close the current limited tab
             sleep(1)
-            # RECURSIVE CALL: The pre-check at the top will now pick Flash
+            
+            # RECURSIVE CALL: 
+            # We call with the ORIGINAL 'llm' request. 
+            # The "PRE-CHECK" at the top of the new function call will read the state file,
+            # see that the current model is now blocked, and automatically pick the next one.
             return talkto(llm, prompt, imagedata, debug, tabswitch, cascade)
 
         # 4. PERFORM ACTUAL COPY
@@ -281,4 +316,5 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
 
 if __name__ == "__main__":
     # Test call
+    # This will try aistudio -> aistudio_flash -> gemini_2_5_pro -> gemini_flash_latest
     print(talkto('aistudio', 'Hi, please tell me which model version you are.', debug=True))
