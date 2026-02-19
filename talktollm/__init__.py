@@ -163,7 +163,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
     """
     Interacts with an LLM via browser. 
     Supports 'cascade' to switch through models if rate limited.
-    Chain: 3 Pro -> 3 Flash -> 2.5 Pro -> Flash Latest
+    Chain: 3.1 Pro > 3 Pro -> 3 Flash -> 2.5 Pro -> Flash Latest
     """
     llm = llm.lower()
     
@@ -171,7 +171,8 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
     urls = {
         'deepseek': 'https://chat.deepseek.com/',
         'gemini': 'https://gemini.google.com/app',
-        'aistudio': 'https://aistudio.google.com/prompts/new_chat?model=gemini-3-pro-preview',
+        'aistudio': 'https://aistudio.google.com/prompts/new_chat?model=gemini-3.1-pro-preview',
+        'aistudio_3': 'https://aistudio.google.com/prompts/new_chat?model=gemini-3-pro-preview',
         'aistudio_flash': 'https://aistudio.google.com/prompts/new_chat?model=gemini-3-flash-preview',
         'gemini_2_5_pro': 'https://aistudio.google.com/prompts/new_chat?model=gemini-2.5-pro',
         'gemini_flash_latest': 'https://aistudio.google.com/prompts/new_chat?model=gemini-flash-latest',
@@ -179,7 +180,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
     }
 
     # Define the fallback priority chain
-    CASCADE_CHAIN = ['aistudio', 'aistudio_flash', 'gemini_2_5_pro', 'gemini_flash_latest']
+    CASCADE_CHAIN = ['aistudio', 'aistudio_3', 'aistudio_flash', 'gemini_2_5_pro', 'gemini_flash_latest']
 
     # 1. CASCADE PRE-CHECK
     current_llm_key = llm
