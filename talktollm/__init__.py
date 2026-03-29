@@ -172,15 +172,14 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         'deepseek': 'https://chat.deepseek.com/',
         'gemini': 'https://gemini.google.com/app',
         'aistudio': 'https://aistudio.google.com/prompts/new_chat?model=gemini-3.1-pro-preview',
-        'aistudio_3': 'https://aistudio.google.com/prompts/new_chat?model=gemini-3-pro-preview',
         'aistudio_flash': 'https://aistudio.google.com/prompts/new_chat?model=gemini-3-flash-preview',
         'gemini_2_5_pro': 'https://aistudio.google.com/prompts/new_chat?model=gemini-2.5-pro',
-        'gemini_flash_latest': 'https://aistudio.google.com/prompts/new_chat?model=gemini-flash-latest',
+        'gemini-3.1-flash-lite-preview': 'https://aistudio.google.com/prompts/new_chat?model=gemini-3.1-flash-lite-preview',
         'nanobanana': 'https://aistudio.google.com/prompts/new_chat?model=gemini-2.5-flash-image-preview'
     }
 
     # Define the fallback priority chain
-    CASCADE_CHAIN = ['aistudio', 'aistudio_3', 'aistudio_flash', 'gemini_2_5_pro', 'gemini_flash_latest']
+    CASCADE_CHAIN = ['aistudio', 'aistudio_flash', 'gemini-3.1-flash-lite-preview', 'gemini_2_5_pro']
 
     # 1. CASCADE PRE-CHECK
     current_llm_key = llm
