@@ -236,7 +236,6 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
                 if debug: print(f"Pasting image {i+1}...")
                 if set_clipboard_image(img_b64):
                     pyautogui.hotkey('ctrl', 'v')
-                    sleep(7) # Wait for AI Studio/Gemini upload processing
             sleep(0.5)
 
         # Paste text prompt
