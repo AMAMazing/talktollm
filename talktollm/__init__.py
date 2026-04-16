@@ -225,7 +225,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         sleep(0.5)
 
         # Wait for the message input area to appear
-        optimiseWait(['message','ormessage','type3','message2','typeytype','tyre','typenew', 'typeplz'], 
+        optimiseWait(['message','ormessage','type3','message2','typeytype','tyre','typenew', 'typeplz','starttype'], 
                      clicks=2, 
                      interrupter=['chrome','aistudio','aistudio2'], 
                      interrupterclicks=[1,0,0])

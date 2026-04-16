@@ -29,6 +29,7 @@ talktollm/images/aistudio/run.png
 talktollm/images/aistudio/rundark.png
 talktollm/images/aistudio/runsmthn.png
 talktollm/images/aistudio/scroll.png
+talktollm/images/aistudio/starttype.png
 talktollm/images/aistudio/thatnumagain.png
 talktollm/images/aistudio/thinking.png
 talktollm/images/aistudio/type3.png
