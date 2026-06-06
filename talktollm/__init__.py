@@ -10,6 +10,8 @@ import shutil
 import webbrowser
 import os
 import importlib.resources
+import math
+import random
 from datetime import datetime, timedelta
 from PIL import Image
 from time import sleep
@@ -157,9 +159,112 @@ def _get_clipboard_content(retries: int = 3, delay: float = 0.2) -> str | None:
             time.sleep(delay)
     return None
 
+# --- Mouse Helpers (WindMouse & Human Circles) ---
+
+def _generate_windmouse_points(start_x, start_y, dest_x, dest_y, G_0=8, W_0=4, M_0=10, D_0=15):
+    """Generates coordinates using the WindMouse algorithm. Adjusted parameters to be slower and softer."""
+    v_x = v_y = W_x = W_y = 0
+    x, y = start_x, start_y
+    points = [(x, y)]
+    while True:
+        dist = math.hypot(dest_x - x, dest_y - y)
+        if dist < 1:
+            break
+        
+        wind = min(W_0, dist)
+        if dist >= D_0:
+            W_x = W_x / math.sqrt(3) + (random.random() * (wind * 2 + 1) - wind) / math.sqrt(5)
+            W_y = W_y / math.sqrt(3) + (random.random() * (wind * 2 + 1) - wind) / math.sqrt(5)
+        else:
+            W_x = W_x / math.sqrt(3)
+            W_y = W_y / math.sqrt(3)
+            if M_0 < 3: M_0 = random.random() * 3 + 3
+            else: M_0 /= math.sqrt(5)
+        
+        v_x += W_x + G_0 * (dest_x - x) / dist
+        v_y += W_y + G_0 * (dest_y - y) / dist
+        v_mag = math.hypot(v_x, v_y)
+        
+        if v_mag > M_0:
+            v_clip = M_0 / 2 + random.random() * M_0 / 2
+            v_x = (v_x / v_mag) * v_clip
+            v_y = (v_y / v_mag) * v_clip
+        
+        x += v_x
+        y += v_y
+        points.append((int(round(x)), int(round(y))))
+    return points
+
+def _perform_windmouse_move(dest_x, dest_y):
+    """Executes a smooth, slower physical mouse move based on the windmouse points."""
+    start_x, start_y = pyautogui.position()
+    points = _generate_windmouse_points(start_x, start_y, dest_x, dest_y)
+    
+    original_pause = pyautogui.PAUSE
+    pyautogui.PAUSE = 0
+    try:
+        for p in points:
+            pyautogui.moveTo(p[0], p[1], duration=0)
+            # Greatly increased the delay here for a slower, more deliberate human drag
+            time.sleep(random.uniform(0.005, 0.012))
+    finally:
+        pyautogui.PAUSE = original_pause
+
+def _generate_human_circle_points(start_x, start_y, duration=2.0):
+    """Generates coordinates for a wobbly, imperfect circle simulating human idle behavior."""
+    points = []
+    fps = 60
+    total_points = int(duration * fps)
+    revolutions = random.uniform(1.5, 3.5) # Spin around 1.5 to 3.5 times
+    
+    # Establish base width/height of the circle
+    base_radius_x = random.randint(50, 180)
+    base_radius_y = random.randint(50, 180)
+    
+    # Start the circle relative to current mouse position (no sudden teleporting)
+    start_angle = random.uniform(0, 2 * math.pi)
+    center_x = start_x - base_radius_x * math.cos(start_angle)
+    center_y = start_y - base_radius_y * math.sin(start_angle)
+    
+    for i in range(total_points):
+        t = i / total_points
+        
+        # Add ease-in/ease-out to time to simulate hand speed varying slightly
+        human_t = t + (math.sin(t * math.pi * 2) * 0.05)
+        angle = start_angle + (human_t * revolutions * 2 * math.pi)
+        
+        # Introduce low frequency sine "wobble" + random micro-jitter to the radius
+        noise_x = math.sin(i * 0.2) * 8 + random.uniform(-2, 2)
+        noise_y = math.cos(i * 0.2) * 8 + random.uniform(-2, 2)
+        
+        x = center_x + (base_radius_x + noise_x) * math.cos(angle)
+        y = center_y + (base_radius_y + noise_y) * math.sin(angle)
+        
+        points.append((int(round(x)), int(round(y))))
+        
+    return points
+
+def _perform_human_circles(duration=2.0):
+    """Executes the idle circular mouse pattern."""
+    start_x, start_y = pyautogui.position()
+    screen_w, screen_h = pyautogui.size()
+    points = _generate_human_circle_points(start_x, start_y, duration)
+    
+    original_pause = pyautogui.PAUSE
+    pyautogui.PAUSE = 0
+    try:
+        for p in points:
+            # Prevent going out of screen bounds
+            px = max(0, min(screen_w - 1, p[0]))
+            py = max(0, min(screen_h - 1, p[1]))
+            pyautogui.moveTo(px, py, duration=0)
+            time.sleep(random.uniform(0.010, 0.020))
+    finally:
+        pyautogui.PAUSE = original_pause
+
 # --- Main Interaction Logic ---
 
-def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: bool = False, tabswitch: bool = True, cascade: bool = True) -> str:
+def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: bool = False, tabswitch: bool = True, cascade: bool = True, humanize: bool = False, windmouse: bool = False) -> str:
     """
     Interacts with an LLM via browser. 
     Supports 'cascade' to switch through models if rate limited.
@@ -227,7 +332,8 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         optimiseWait(['message','ormessage','type3','message2','typeytype','tyre','typenew', 'typeplz','starttype'], 
                      clicks=2, 
                      interrupter=['chrome','aistudio','aistudio2'], 
-                     interrupterclicks=[1,0,0])
+                     interrupterclicks=[1,0,0],
+                     humanize=humanize)
 
         # Paste images
         if imagedata:
@@ -246,11 +352,28 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         pyautogui.hotkey('ctrl', 'enter')
 
         if current_llm_key == 'gemini':
-            optimiseWait('send')
+            optimiseWait('send', humanize=humanize)
 
         # Setup clipboard tracking
         set_clipboard('talktollm: awaiting response')
         initial_seq = win32clipboard.GetClipboardSequenceNumber()
+
+        if windmouse:
+            if debug: print("Performing slow idle natural mouse movements (WindMouse & Circles)...")
+            screen_w, screen_h = pyautogui.size()
+            
+            # Select a random coordinate but pad it so the circles don't immediately hit screen borders
+            pad = 250
+            target_x = random.randint(pad, max(pad + 1, screen_w - pad))
+            target_y = random.randint(pad, max(pad + 1, screen_h - pad))
+            
+            try:
+                # Deliberate slow move
+                _perform_windmouse_move(target_x, target_y)
+                # Random idle circular/wobbly motion for a couple seconds
+                _perform_human_circles(duration=random.uniform(1.5, 3.5))
+            except Exception as e:
+                if debug: print(f"Idle windmouse moves failed: {e}")
 
         # 2. WAIT FOR COPY OR RATE LIMIT
         if debug: print("Waiting for response (checking for Copy or Rate Limit)...")
@@ -258,7 +381,8 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         # We look for copy buttons OR the rate limit image
         search_results = optimiseWait(['copy', 'orcopy', 'copy2', 'copy3', 'cop4', 'copyorsmthn', 'copyimage', 'ratelimit'], 
                                      clicks=0, 
-                                     interrupter='scroll')
+                                     interrupter='scroll',
+                                     humanize=humanize)
 
         # 3. CASCADE TRIGGER (If rate limited during the process)
         if cascade and search_results.get('image') == 'ratelimit' and current_llm_key in CASCADE_CHAIN:
@@ -271,14 +395,11 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
             sleep(1)
             
             # RECURSIVE CALL: 
-            # We call with the ORIGINAL 'llm' request. 
-            # The "PRE-CHECK" at the top of the new function call will read the state file,
-            # see that the current model is now blocked, and automatically pick the next one.
-            return talkto(llm, prompt, imagedata, debug, tabswitch, cascade)
+            return talkto(llm, prompt, imagedata, debug, tabswitch, cascade, humanize, windmouse)
 
         # 4. PERFORM ACTUAL COPY
         sleep(1)
-        optimiseWait(['copy', 'orcopy','copy2','copy3','cop4','copyorsmthn','copyimage'])
+        optimiseWait(['copy', 'orcopy','copy2','copy3','cop4','copyorsmthn','copyimage'], humanize=humanize)
         if debug: print("Copy clicked.")
 
         # 5. RETRIEVE FROM CLIPBOARD
@@ -313,6 +434,5 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         return ""
 
 if __name__ == "__main__":
-    # Test call
-    # This will try aistudio -> aistudio_flash -> gemini_2_5_pro -> gemini_flash_latest
-    print(talkto('aistudio', 'Hi, please tell me which model version you are.', debug=True))
+    # Test call with humanize and windmouse enabled
+    print(talkto('aistudio', 'Hi, please tell me which model version you are.', debug=True, humanize=True, windmouse=True))
