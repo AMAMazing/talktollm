@@ -326,10 +326,10 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
     try:
         if debug: print(f"Opening {current_llm_key}...")
         webbrowser.open_new_tab(urls[current_llm_key])
-        sleep(0.5)
+        sleep(1.5)
 
         # Wait for the message input area to appear
-        optimiseWait(['message','ormessage','type3','message2','typeytype','tyre','typenew', 'typeplz','starttype'], 
+        optimiseWait(['message','ormessage','type3','message2','typeytype','tyre','typenew', 'typeplz','starttype', 'ask'], 
                      clicks=2, 
                      interrupter=['chrome','aistudio','aistudio2'], 
                      interrupterclicks=[1,0,0],
@@ -350,9 +350,6 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         sleep(1)
         pyautogui.press('enter')
         pyautogui.hotkey('ctrl', 'enter')
-
-        if current_llm_key == 'gemini':
-            optimiseWait('send', humanize=humanize)
 
         # Setup clipboard tracking
         set_clipboard('talktollm: awaiting response')
@@ -379,7 +376,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         if debug: print("Waiting for response (checking for Copy or Rate Limit)...")
         
         # We look for copy buttons OR the rate limit image
-        search_results = optimiseWait(['copy', 'orcopy', 'copy2', 'copy3', 'cop4', 'copyorsmthn', 'copyimage', 'ratelimit'], 
+        search_results = optimiseWait(['copy', 'orcopy', 'copy2', 'copy3', 'cop4', 'copyorsmthn', 'copyimage', 'ratelimit','copyyy','copyy'], 
                                      clicks=0, 
                                      interrupter='scroll',
                                      humanize=humanize)
@@ -399,7 +396,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
 
         # 4. PERFORM ACTUAL COPY
         sleep(1)
-        optimiseWait(['copy', 'orcopy','copy2','copy3','cop4','copyorsmthn','copyimage'], humanize=humanize)
+        optimiseWait(['copy', 'orcopy','copy2','copy3','cop4','copyorsmthn','copyimage','copyyy','copyy'], humanize=humanize)
         if debug: print("Copy clicked.")
 
         # 5. RETRIEVE FROM CLIPBOARD
@@ -435,4 +432,4 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
 
 if __name__ == "__main__":
     # Test call with humanize and windmouse enabled
-    print(talkto('aistudio', 'Hi, please tell me which model version you are.', debug=True, humanize=True, windmouse=True))
+    print(talkto('gemini', 'Hi', debug=True, humanize=True, windmouse=True))
