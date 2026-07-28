@@ -268,22 +268,31 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
     """
     Interacts with an LLM via browser. 
     Supports 'cascade' to switch through models if rate limited.
-    Chain: 3.1 Pro > 3 Pro -> 3 Flash -> 2.5 Pro -> Flash Latest
+    Chain: Pro > Flash -> Flash Lite
     """
     llm = llm.lower()
+    
+    # --- Backwards Compatibility Mapping ---
+    # Intercept legacy names and silently update them to the new targets
+    legacy_mapping = {
+        'aistudio': 'aistudio-pro',
+        'aistudio_flash': 'aistudio-flash',
+        'gemini-3.1-flash-lite-preview': 'aistudio-flash-lite'
+    }
+    llm = legacy_mapping.get(llm, llm)
     
     # URL Mapping
     urls = {
         'deepseek': 'https://chat.deepseek.com/',
         'gemini': 'https://gemini.google.com/app',
-        'aistudio': 'https://aistudio.google.com/prompts/new_chat?model=gemini-3.1-pro-preview',
-        'aistudio_flash': 'https://aistudio.google.com/prompts/new_chat?model=gemini-3.5-flash',
-        'gemini-3.1-flash-lite-preview': 'https://aistudio.google.com/prompts/new_chat?model=gemini-3.1-flash-lite-preview',
+        'aistudio-pro': 'https://aistudio.google.com/prompts/new_chat?model=gemini-pro-latest',
+        'aistudio-flash': 'https://aistudio.google.com/prompts/new_chat?model=gemini-flash-latest',
+        'aistudio-flash-lite': 'https://aistudio.google.com/prompts/new_chat?model=gemini-flash-lite-latest',
         'nanobanana': 'https://aistudio.google.com/prompts/new_chat?model=gemini-2.5-flash-image-preview'
     }
 
     # Define the fallback priority chain
-    CASCADE_CHAIN = ['aistudio', 'aistudio_flash', 'gemini-3.1-flash-lite-preview']
+    CASCADE_CHAIN = ['aistudio-pro', 'aistudio-flash', 'aistudio-flash-lite']
 
     # 1. CASCADE PRE-CHECK
     current_llm_key = llm
@@ -341,7 +350,10 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
                 if debug: print(f"Pasting image {i+1}...")
                 if set_clipboard_image(img_b64):
                     pyautogui.hotkey('ctrl', 'v')
-            sleep(0.5)
+            if llm == 'gemini':
+                sleep(5)
+            else:
+                sleep(0.5)
 
         # Paste text prompt
         if debug: print("Pasting prompt...")
