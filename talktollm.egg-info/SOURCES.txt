@@ -19,6 +19,7 @@ talktollm/images/aistudio/copy2.png
 talktollm/images/aistudio/copyimage.png
 talktollm/images/aistudio/copyorsmthn.png
 talktollm/images/aistudio/done.png
+talktollm/images/aistudio/error.png
 talktollm/images/aistudio/message.png
 talktollm/images/aistudio/message2.png
 talktollm/images/aistudio/orcopy.png
