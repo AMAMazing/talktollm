@@ -390,7 +390,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         # We look for copy buttons OR the rate limit image
         search_results = optimiseWait(['copy', 'orcopy', 'copy2', 'copy3', 'cop4', 'copyorsmthn', 'copyimage', 'ratelimit','copyyy','copyy'], 
                                      clicks=0, 
-                                     interrupter=['scroll','error'],
+                                     interrupter='scroll',
                                      humanize=humanize)
 
         # 3. CASCADE TRIGGER (If rate limited during the process)
