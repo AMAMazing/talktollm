@@ -13,6 +13,7 @@ talktollm/images/aistudio/8192.png
 talktollm/images/aistudio/aistudio.png
 talktollm/images/aistudio/aistudio2.png
 talktollm/images/aistudio/chrome.png
+talktollm/images/aistudio/cline.png
 talktollm/images/aistudio/cop4.png
 talktollm/images/aistudio/copy.png
 talktollm/images/aistudio/copy2.png
