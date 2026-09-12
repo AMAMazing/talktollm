@@ -12,6 +12,7 @@ import os
 import importlib.resources
 import math
 import random
+import threading
 from datetime import datetime, timedelta
 from PIL import Image
 from time import sleep
@@ -53,7 +54,7 @@ def _set_rate_limit_state(llm: str):
             with open(STATE_FILE, 'r') as f:
                 data = json.load(f)
         except: pass
-    
+
     data[llm] = datetime.now().isoformat()
     try:
         with open(STATE_FILE, 'w') as f:
@@ -74,7 +75,7 @@ def copy_images_to_temp(llm: str, debug: bool = False):
 
     shutil.rmtree(image_path, ignore_errors=True)
     os.makedirs(image_path, exist_ok=True)
-    
+
     try:
         # Check for local dev folder first
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -105,6 +106,78 @@ def copy_images_to_temp(llm: str, debug: bool = False):
     except Exception as e:
         print(f"Error during image setup: {e}")
         set_autopath(image_path)
+
+# --- Interface Detection Helper ---
+
+def _is_interface_detected(img_folder: str, debug: bool = False) -> bool:
+    """
+    Checks whether the LLM chat interface is already visible on the screen.
+    Looks for standard input indicator images in the temporary image directory.
+    """
+    try:
+        temp_dir = tempfile.gettempdir()
+        target_dir = os.path.join(temp_dir, 'talktollm_images', img_folder)
+
+        if not os.path.exists(target_dir):
+            copy_images_to_temp(img_folder, debug=debug)
+
+        if not os.path.exists(target_dir):
+            if debug: print(f"DEBUG: Image folder not found: {target_dir}")
+            return False
+
+        input_candidates = ['message', 'ormessage', 'type3', 'message2', 'typeytype', 'tyre', 'typenew', 'typeplz', 'starttype', 'ask']
+
+        # Collect available image files in the target directory
+        available_files = {}
+        for fname in os.listdir(target_dir):
+            base_name, _ = os.path.splitext(fname)
+            available_files[base_name] = os.path.join(target_dir, fname)
+
+        for candidate in input_candidates:
+            img_path = available_files.get(candidate)
+            if not img_path:
+                candidate_png = os.path.join(target_dir, f"{candidate}.png")
+                if os.path.isfile(candidate_png):
+                    img_path = candidate_png
+
+            if img_path and os.path.isfile(img_path):
+                try:
+                    # Attempt with confidence=0.8 if supported (requires opencv)
+                    pos = pyautogui.locateOnScreen(img_path, confidence=0.8)
+                except (TypeError, Exception):
+                    try:
+                        # Fallback without confidence parameter
+                        pos = pyautogui.locateOnScreen(img_path)
+                    except Exception:
+                        pos = None
+
+                if pos is not None:
+                    if debug: print(f"DEBUG: Interface detected on screen using '{candidate}' at {pos}.")
+                    return True
+
+    except Exception as e:
+        if debug: print(f"DEBUG: Error checking interface detection: {e}")
+
+    return False
+
+# --- Background Tab Reset Helper (Option A) ---
+
+def _background_reset(url: str, tabswitch: bool):
+    """
+    Closes the used tab, pre-opens a fresh session tab in the background,
+    and optionally executes alt+tab.
+    """
+    try:
+        # Sleep briefly to ensure clipboard read operations finish
+        time.sleep(0.1)
+        pyautogui.hotkey('ctrl', 'w')
+        time.sleep(0.3)
+        webbrowser.open_new_tab(url)
+        time.sleep(0.5)
+        if tabswitch:
+            pyautogui.hotkey('alt', 'tab')
+    except Exception as e:
+        print(f"Error in _background_reset: {e}")
 
 # --- Clipboard Helpers ---
 
@@ -170,7 +243,7 @@ def _generate_windmouse_points(start_x, start_y, dest_x, dest_y, G_0=8, W_0=4, M
         dist = math.hypot(dest_x - x, dest_y - y)
         if dist < 1:
             break
-        
+
         wind = min(W_0, dist)
         if dist >= D_0:
             W_x = W_x / math.sqrt(3) + (random.random() * (wind * 2 + 1) - wind) / math.sqrt(5)
@@ -180,16 +253,16 @@ def _generate_windmouse_points(start_x, start_y, dest_x, dest_y, G_0=8, W_0=4, M
             W_y = W_y / math.sqrt(3)
             if M_0 < 3: M_0 = random.random() * 3 + 3
             else: M_0 /= math.sqrt(5)
-        
+
         v_x += W_x + G_0 * (dest_x - x) / dist
         v_y += W_y + G_0 * (dest_y - y) / dist
         v_mag = math.hypot(v_x, v_y)
-        
+
         if v_mag > M_0:
             v_clip = M_0 / 2 + random.random() * M_0 / 2
             v_x = (v_x / v_mag) * v_clip
             v_y = (v_y / v_mag) * v_clip
-        
+
         x += v_x
         y += v_y
         points.append((int(round(x)), int(round(y))))
@@ -199,7 +272,7 @@ def _perform_windmouse_move(dest_x, dest_y):
     """Executes a smooth, slower physical mouse move based on the windmouse points."""
     start_x, start_y = pyautogui.position()
     points = _generate_windmouse_points(start_x, start_y, dest_x, dest_y)
-    
+
     original_pause = pyautogui.PAUSE
     pyautogui.PAUSE = 0
     try:
@@ -216,32 +289,32 @@ def _generate_human_circle_points(start_x, start_y, duration=2.0):
     fps = 60
     total_points = int(duration * fps)
     revolutions = random.uniform(1.5, 3.5) # Spin around 1.5 to 3.5 times
-    
+
     # Establish base width/height of the circle
     base_radius_x = random.randint(50, 180)
     base_radius_y = random.randint(50, 180)
-    
+
     # Start the circle relative to current mouse position (no sudden teleporting)
     start_angle = random.uniform(0, 2 * math.pi)
     center_x = start_x - base_radius_x * math.cos(start_angle)
     center_y = start_y - base_radius_y * math.sin(start_angle)
-    
+
     for i in range(total_points):
         t = i / total_points
-        
+
         # Add ease-in/ease-out to time to simulate hand speed varying slightly
         human_t = t + (math.sin(t * math.pi * 2) * 0.05)
         angle = start_angle + (human_t * revolutions * 2 * math.pi)
-        
+
         # Introduce low frequency sine "wobble" + random micro-jitter to the radius
         noise_x = math.sin(i * 0.2) * 8 + random.uniform(-2, 2)
         noise_y = math.cos(i * 0.2) * 8 + random.uniform(-2, 2)
-        
+
         x = center_x + (base_radius_x + noise_x) * math.cos(angle)
         y = center_y + (base_radius_y + noise_y) * math.sin(angle)
-        
+
         points.append((int(round(x)), int(round(y))))
-        
+
     return points
 
 def _perform_human_circles(duration=2.0):
@@ -249,7 +322,7 @@ def _perform_human_circles(duration=2.0):
     start_x, start_y = pyautogui.position()
     screen_w, screen_h = pyautogui.size()
     points = _generate_human_circle_points(start_x, start_y, duration)
-    
+
     original_pause = pyautogui.PAUSE
     pyautogui.PAUSE = 0
     try:
@@ -264,14 +337,15 @@ def _perform_human_circles(duration=2.0):
 
 # --- Main Interaction Logic ---
 
-def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: bool = False, tabswitch: bool = True, cascade: bool = True, humanize: bool = False, windmouse: bool = False) -> str:
+def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: bool = False, tabswitch: bool = True, cascade: bool = True, humanize: bool = False, windmouse: bool = False, fast_mode: bool = False) -> str:
     """
-    Interacts with an LLM via browser. 
+    Interacts with an LLM via browser.
     Supports 'cascade' to switch through models if rate limited.
     Chain: Pro > Flash -> Flash Lite
+    Supports 'fast_mode' to eliminate cold browser launch and tab reset latency.
     """
     llm = llm.lower()
-    
+
     # --- Backwards Compatibility Mapping ---
     # Intercept legacy names and silently update them to the new targets
     legacy_mapping = {
@@ -280,7 +354,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         'gemini-3.1-flash-lite-preview': 'aistudio-flash-lite'
     }
     llm = legacy_mapping.get(llm, llm)
-    
+
     # URL Mapping
     urls = {
         'deepseek': 'https://chat.deepseek.com/',
@@ -296,14 +370,14 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
 
     # 1. CASCADE PRE-CHECK
     current_llm_key = llm
-    
+
     if cascade and llm in CASCADE_CHAIN:
         # Find where we are starting in the chain
         try:
             start_index = CASCADE_CHAIN.index(llm)
         except ValueError:
             start_index = 0
-            
+
         # Iterate through the chain to find the first NON-limited model
         for i in range(start_index, len(CASCADE_CHAIN)):
             candidate = CASCADE_CHAIN[i]
@@ -315,7 +389,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
                 if debug and current_llm_key != llm:
                     print(f"DEBUG: Cascaded to '{current_llm_key}'")
                 break
-        
+
         # If all are limited, we default to the last one (or you could raise an error)
         if _get_rate_limit_state(current_llm_key):
              print("WARNING: All models in cascade chain appear to be rate limited. Trying last resort.")
@@ -332,17 +406,29 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
 
     set_image_path(img_folder, debug=debug)
 
+    # In fast mode, suppress humanized delays and windmouse
+    active_humanize = False if fast_mode else humanize
+    active_windmouse = False if fast_mode else windmouse
+
     try:
-        if debug: print(f"Opening {current_llm_key}...")
-        webbrowser.open_new_tab(urls[current_llm_key])
-        sleep(1.5)
+        # Check if interface is already open when in fast mode
+        is_already_open = False
+        if fast_mode:
+            is_already_open = _is_interface_detected(img_folder, debug=debug)
+
+        if not is_already_open:
+            if debug: print(f"Opening {current_llm_key}...")
+            webbrowser.open_new_tab(urls[current_llm_key])
+            sleep(1.5)
+        else:
+            if debug: print(f"DEBUG: Interface already open for {current_llm_key}. Skipping tab launch.")
 
         # Wait for the message input area to appear
-        optimiseWait(['message','ormessage','type3','message2','typeytype','tyre','typenew', 'typeplz','starttype', 'ask'], 
-                     clicks=2, 
-                     interrupter=['chrome','aistudio','aistudio2'], 
+        optimiseWait(['message','ormessage','type3','message2','typeytype','tyre','typenew', 'typeplz','starttype', 'ask'],
+                     clicks=2,
+                     interrupter=['chrome','aistudio','aistudio2'],
                      interrupterclicks=[1,0,0],
-                     humanize=humanize)
+                     humanize=active_humanize)
 
         # Paste images
         if imagedata:
@@ -359,7 +445,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         if debug: print("Pasting prompt...")
         set_clipboard(prompt)
         pyautogui.hotkey('ctrl', 'v')
-        sleep(1)
+        sleep(0.2 if fast_mode else 1)
         pyautogui.press('enter')
         pyautogui.hotkey('ctrl', 'enter')
 
@@ -367,15 +453,15 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         set_clipboard('talktollm: awaiting response')
         initial_seq = win32clipboard.GetClipboardSequenceNumber()
 
-        if windmouse:
+        if active_windmouse:
             if debug: print("Performing slow idle natural mouse movements (WindMouse & Circles)...")
             screen_w, screen_h = pyautogui.size()
-            
+
             # Select a random coordinate but pad it so the circles don't immediately hit screen borders
             pad = 250
             target_x = random.randint(pad, max(pad + 1, screen_w - pad))
             target_y = random.randint(pad, max(pad + 1, screen_h - pad))
-            
+
             try:
                 # Deliberate slow move
                 _perform_windmouse_move(target_x, target_y)
@@ -386,48 +472,60 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
 
         # 2. WAIT FOR COPY OR RATE LIMIT
         if debug: print("Waiting for response (checking for Copy or Rate Limit)...")
-        
+
         # We look for copy buttons OR the rate limit image
-        search_results = optimiseWait(['copy', 'orcopy', 'copy2', 'copy3', 'cop4', 'copyorsmthn', 'copyimage', 'ratelimit','copyyy','copyy'], 
-                                     clicks=0, 
+        search_results = optimiseWait(['copy', 'orcopy', 'copy2', 'copy3', 'cop4', 'copyorsmthn', 'copyimage', 'ratelimit','copyyy','copyy'],
+                                     clicks=0,
                                      interrupter='scroll',
-                                     humanize=humanize)
+                                     humanize=active_humanize)
 
         # 3. CASCADE TRIGGER (If rate limited during the process)
         if cascade and search_results.get('image') == 'ratelimit' and current_llm_key in CASCADE_CHAIN:
             if debug: print(f"DEBUG: Rate limit detected on {current_llm_key}! Switching to next fallback.")
-            
+
             # Mark current model as limited
             _set_rate_limit_state(current_llm_key)
-            
+
             pyautogui.hotkey('ctrl', 'w') # Close the current limited tab
             sleep(1)
-            
-            # RECURSIVE CALL: 
-            return talkto(llm, prompt, imagedata, debug, tabswitch, cascade, humanize, windmouse)
+
+            # RECURSIVE CALL:
+            return talkto(llm, prompt, imagedata, debug, tabswitch, cascade, humanize, windmouse, fast_mode)
 
         # 4. PERFORM ACTUAL COPY
-        sleep(1)
-        optimiseWait(['copy', 'orcopy','copy2','copy3','cop4','copyorsmthn','copyimage','copyyy','copyy'], humanize=humanize)
+        sleep(0.2 if fast_mode else 1)
+        optimiseWait(['copy', 'orcopy','copy2','copy3','cop4','copyorsmthn','copyimage','copyyy','copyy'], humanize=active_humanize)
         if debug: print("Copy clicked.")
 
         # 5. RETRIEVE FROM CLIPBOARD
         start_time = time.time()
         timeout = 20
         response_text = ""
-        
+
+        poll_interval = 0.05 if fast_mode else 0.2
+
         while time.time() - start_time < timeout:
             if win32clipboard.GetClipboardSequenceNumber() != initial_seq:
                 content = _get_clipboard_content()
                 response_text = content if content is not None else "[Data copied to clipboard]"
                 break
-            time.sleep(0.2)
+            time.sleep(poll_interval)
         else:
             if debug: print("Timeout: Clipboard never updated.")
             pyautogui.hotkey('ctrl', 'w')
             return ""
 
-        # Cleanup
+        if fast_mode:
+            # Background Pre-Reset (Option A)
+            if debug: print("Spawning background tab reset thread and returning immediately.")
+            threading.Thread(
+                target=_background_reset,
+                args=(urls[current_llm_key], tabswitch),
+                daemon=True
+            ).start()
+            return response_text
+
+        # Synchronous cleanup for standard mode
         if debug: print("Closing tab and finishing.")
         pyautogui.hotkey('ctrl', 'w')
         sleep(0.5)
