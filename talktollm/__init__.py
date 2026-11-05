@@ -254,7 +254,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
     """
     Interacts with an LLM via browser.
     Supports 'cascade' to switch through models if rate limited.
-    Chain: Pro > Flash -> Flash Lite
+    Chain: Argon > Pro > Flash -> Flash Lite
     Supports 'fast_mode' to eliminate cold browser launch and tab reset latency.
     """
     llm = llm.lower()
@@ -263,7 +263,8 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
     legacy_mapping = {
         'aistudio': 'aistudio-pro',
         'aistudio_flash': 'aistudio-flash',
-        'gemini-3.1-flash-lite-preview': 'aistudio-flash-lite'
+        'gemini-3.1-flash-lite-preview': 'aistudio-flash-lite',
+        'gemini-4-argon': 'aistudio-argon'
     }
     llm = legacy_mapping.get(llm, llm)
 
@@ -271,6 +272,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
     urls = {
         'deepseek': 'https://chat.deepseek.com/',
         'gemini': 'https://gemini.google.com/app',
+        'aistudio-argon': 'https://aistudio.google.com/prompts/new_chat?model=gemini-4-argon',
         'aistudio-pro': 'https://aistudio.google.com/prompts/new_chat?model=gemini-pro-latest',
         'aistudio-flash': 'https://aistudio.google.com/prompts/new_chat?model=gemini-flash-latest',
         'aistudio-flash-lite': 'https://aistudio.google.com/prompts/new_chat?model=gemini-flash-lite-latest',
@@ -278,7 +280,7 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
     }
 
     # Define the fallback priority chain
-    CASCADE_CHAIN = ['aistudio-pro', 'aistudio-flash', 'aistudio-flash-lite']
+    CASCADE_CHAIN = ['aistudio-argon', 'aistudio-pro', 'aistudio-flash', 'aistudio-flash-lite']
 
     # 1. CASCADE PRE-CHECK
     current_llm_key = llm
@@ -438,4 +440,4 @@ def talkto(llm: str, prompt: str, imagedata: list[str] | None = None, debug: boo
         return ""
 
 if __name__ == "__main__":
-    print(talkto('gemini', 'Hi', debug=True, humanize=True, windmouse=True))
+    print(talkto('aistudio-argon', 'Hi', debug=True, humanize=True, windmouse=True))
